@@ -13,7 +13,7 @@ public class Divider
    private int[][] grid;
    private ArrayList<District> disList;
    private int numDis, pop, disPop, totalPerim = 0, highPerim = 0;
-   private double repRatio;
+   private double repRatio, blu, red;
    
    public Divider(int[][] grid, int numDis, int numSquare)
    {
@@ -35,9 +35,9 @@ public class Divider
 		   }
       }
       
-      int blu = (int) (100 * (blue / pop));
-      int red = 100 - (int) blu;
-      System.out.println(blu + "% blue, " + red + "% red");
+      blu = 100 * (blue / pop);
+      red = 100 - blu;
+      System.out.println((int) blu + "% blue, " + (int) red + "% red");
    }
    
    public void initDistricts()
@@ -384,6 +384,19 @@ public class Divider
    public ArrayList<District> getDisList()
    {
       return disList;
+   }
+   
+   // Returns the proportion of blue voters.
+   public double getPopRatio()
+   {
+      return blu / 100;
+   }
+   
+   // Returns the proportion of blue representatives.
+   public double getRepRatio()
+   {
+      setRatio();
+      return repRatio;
    }
 } 
    

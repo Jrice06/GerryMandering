@@ -55,8 +55,21 @@ public class GerryComponent extends JComponent
 	    
 	   divider = new Divider(grid, numDis, grid.length * grid[0].length);
 	   this.disList = divider.getDisList();
-	   trade = new Trader(grid, disList, grid.length * grid[0].length / numDis);
+	   trade = new Trader(grid, disList, grid.length * grid[0].length / numDis,
+	    divider.getPopRatio());
 	}
+	
+	public void makeTrade()
+	{
+	   trade.updateRepRatio(divider.getRepRatio());
+	   trade.makeBestTrade();
+	}
+	
+	public void undoTrade()
+	{
+	   	trade.updateRepRatio(divider.getRepRatio());
+	   	trade.undoTrade();
+	 }
 	
 	public void paintComponent(Graphics g)
 	{

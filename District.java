@@ -37,6 +37,11 @@ public class District
       return zone.size();
    }
    
+   public boolean contains(Point temp)
+   {
+      return zone.contains(temp);
+   }
+   
    /**
       Returns the proportion of squares in this district that are blue.
    */
@@ -58,6 +63,29 @@ public class District
    public double getRedRep()
    {
       return 1 - getBlueRep();
+   }
+   
+   /**
+      Returns the proportion of squares in this district that would be blue
+      if the district traded a blue square for a red square.
+   */
+   public double getBlueTradeRep()
+   {
+      double temp = getBlueRep();
+      double val = temp * zone.size() - 1;
+      return val / zone.size();
+   }
+   
+   /**
+      Returns the proportion of squares in this district that would be red
+      if the district traded a red square for a blue square.
+   */
+   public double getRedTradeRep()
+   {
+      double temp = getRedRep();
+      double val = temp * zone.size() - 1;
+      
+      return val / zone.size();
    }
    
    public boolean inDistrict(Point spot)
@@ -228,7 +256,6 @@ public class District
             }
          }
       }
-      System.out.println("Size of list is: " + borders.size());
       return borders;
    }
    

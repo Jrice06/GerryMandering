@@ -15,12 +15,21 @@ public class GerryFrame extends JFrame
 {
    private static final int FRAME_WIDTH = 800, FRAME_HEIGHT = 800;
 	private GerryComponent scene;
+	private boolean trade = false, undo = false;
 	
 	class TimerListener implements ActionListener
 	{
 		public void actionPerformed(ActionEvent event)
 		{
-
+         if (trade)  {
+            scene.makeTrade();
+            scene.repaint();
+         }
+         if (undo) {
+            scene.undoTrade();
+            scene.repaint();
+         }
+         trade = undo = false;
 		}
 	}
 	
@@ -29,6 +38,14 @@ public class GerryFrame extends JFrame
 	{
 		public void keyPressed(KeyEvent event)
 		{
+		   String key = KeyStroke.getKeyStrokeForEvent(event).toString();
+			key = key.replace("pressed ", "");
+			if (key.equals("T"))	{
+			   trade = true;
+			}
+			else if (key.equals("U"))  {
+			   undo = true;
+			}
 		}
 		
 		//Do nothing methods.
