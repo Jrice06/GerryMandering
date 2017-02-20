@@ -3,6 +3,8 @@
 */
 
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
 import java.awt.Point;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -35,6 +37,11 @@ public class District
    public int getSize()
    {
       return zone.size();
+   }
+   
+   public ArrayList<Point> getZone()
+   {
+      return zone;
    }
    
    public boolean contains(Point temp)
@@ -268,5 +275,39 @@ public class District
          }
       }
       return null;
+   }
+   
+   /**
+      Determine wether or not the district has an isolation, meaning
+      there exists cells which are not connected to the main area of cells.
+   */
+   public boolean hasIsolation()
+   {
+      Set<Point> island = new HashSet<Point> ();
+      checkNear(zone.get(0), island);
+      return island.size() != zone.size();
+   }
+   
+   private void checkNear(Point thisPoint, Set<Point> island)
+   {
+      int x = (int) thisPoint.getX(), y = (int) thisPoint.getY();
+      
+      island.add(thisPoint);
+      if (zone.contains(new Point(x + 1, y))
+       && !island.contains(new Point(x + 1, y)))   {
+         checkNear(new Point(x + 1, y), island);
+      }
+      if (zone.contains(new Point(x - 1, y))
+       && !island.contains(new Point(x - 1, y)))   {
+         checkNear(new Point(x - 1, y), island);
+      }
+      if (zone.contains(new Point(x, y + 1))
+       && !island.contains(new Point(x, y + 1)))   {
+         checkNear(new Point(x, y + 1), island);
+      }
+      if (zone.contains(new Point(x, y - 1))
+       && !island.contains(new Point(x, y - 1)))   {
+         checkNear(new Point(x, y - 1), island);
+      }
    }
 }

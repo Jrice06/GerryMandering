@@ -29,6 +29,10 @@ public class Trader
       //evaluateTrades(3, 2);
    }
    
+   /**
+      This class contains all the information for a potential trade
+      proposition.
+   */
    private class TradeProp
    {
       int perimChange;
@@ -81,11 +85,22 @@ public class Trader
    {
       int party = 1;
       double target = 0, close = popRatio, targetRatio;
+      double targetAdd = .5;
       
+      if (lastTrade != null)  {
+         boolean needClean = cleanUpTrade();
+         if (needClean) {
+            return;
+         }
+      }
+      
+      if (disPop % 2 == 1) {
+         targetAdd = 1;
+      }
       // Find the target ratio of representation to achieve.
       for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
          if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
-            target += .5;
+            target += targetAdd;
             close = Math.abs(target / disList.size() - popRatio);
          }
          else  {
@@ -134,8 +149,9 @@ public class Trader
       Evaluates all possible trades for the specified district for
       the benefit of the specified party. 
       "party" is 1 for the Blue party and 2 for the Red party.
+      Returns true if a trade is made, false otherwise.
    */ 
-   private void evaluateTrades(District temp, int party)
+   private boolean evaluateTrades(District temp, int party)
    {
       ArrayList<District> borderDistricts = temp.getBorderDistricts(disList);
       ArrayList<TradeProp> tradeList = new ArrayList<TradeProp> ();
@@ -144,7 +160,7 @@ public class Trader
          //System.out.println(tradeList.get(tradeList.size() - 1));
       }
       
-      double value = 0, tempVal;
+      double value = -100, tempVal;
       TradeProp bestTrade = tradeList.get(0);
       for (TradeProp trade : tradeList)   {        
          if (trade != null && party == 1)   {
@@ -167,47 +183,42 @@ public class Trader
          System.out.println("Best Trade: " + bestTrade);
          makeTrade(bestTrade);
          lastTrade = bestTrade;
+         return true;
       }    
+      return false;
    }
    
    /**
-      For a specified district, picks the best possible trade between temp and dis.
+      For a specified district, picks the best possible trade between ourDis and theirDis.
       Best possible means lowest perimeter change.
       Returns the proposed trade, or null if no trade is possible.
    */
-   private TradeProp pickBestTrade(District temp, District dis, int party)
+   private TradeProp pickBestTrade(District ourDis, District theirDis, int party)
    {
       TradeProp bestTrade = null;
-      ArrayList<Point> theirBorder = temp.getBorderCells(dis);
-      ArrayList<Point> ourBorder = dis.getBorderCells(temp);
+      ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
+      ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
          
       int perimChange = 10;
          
       for (Point theirCell : theirBorder)  {
          for (Point ourCell : ourBorder)  {
-            if (theirCell.getX() == ourCell.getX() && 
-             Math.abs(theirCell.getY() - ourCell.getY()) == 1)   {
-               ;
-            }
-            else if (theirCell.getY() == ourCell.getY() && 
-             Math.abs(theirCell.getX() - ourCell.getX()) == 1)   {
-               ;
-            }
-            else if (grid[(int) ourCell.getX()][(int) ourCell.getY()] == party ||
+            if (grid[(int) ourCell.getX()][(int) ourCell.getY()] == party ||
              grid[(int) theirCell.getX()][(int) theirCell.getY()] != party) {
                ;
             }
             else  {
-               TradeProp trade = new TradeProp(ourCell, theirCell, temp, dis);
+               TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;
                   
                makeTrade(trade);
-               
-               futPerim = calcPerim(disList);
-               trade.perimChange = futPerim - curPerim;
-               if (futPerim - curPerim < perimChange) {
-                  perimChange = futPerim - curPerim;
-                  bestTrade = trade;
+               if (!ourDis.hasIsolation() && !theirDis.hasIsolation()) {
+                  futPerim = calcPerim(disList);
+                  trade.perimChange = futPerim - curPerim;
+                  if (futPerim - curPerim < perimChange) {
+                     perimChange = futPerim - curPerim;
+                     bestTrade = trade;
+                  }
                }
                makeTrade(trade);
             }
@@ -216,6 +227,9 @@ public class Trader
       return bestTrade;
    }
    
+   /*
+      Makes the specified Trade.  Order does not matter.
+   */
    public void makeTrade(TradeProp trade)
    {
       if (trade.ourDis.contains(trade.ourCell))   { 
@@ -230,6 +244,49 @@ public class Trader
          trade.ourDis.addSquare(trade.ourCell);
          trade.theirDis.addSquare(trade.theirCell);
       }
+   }
+   
+   /**
+      Looks for trades that have no impact on representation but result in negative
+      perimeter changes.
+      Returns true if a clean up trade was made, false otherwise. 
+  */
+   public boolean cleanUpTrade()
+   {
+      TradeProp bestTrade = null;
+      District ourDis = lastTrade.ourDis, theirDis = lastTrade.theirDis;
+      ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
+      ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
+      int perimChange = 0;
+      
+      for (Point theirCell : theirBorder)  {
+         for (Point ourCell : ourBorder)  {
+            if (grid[(int) ourCell.getX()][(int) ourCell.getY()] ==
+             grid[(int) theirCell.getX()][(int) theirCell.getY()]) {
+             
+               TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
+               int curPerim = calcPerim(disList), futPerim;
+                  
+               makeTrade(trade);
+               if (!ourDis.hasIsolation() && !theirDis.hasIsolation()) {
+                  futPerim = calcPerim(disList);
+                  trade.perimChange = futPerim - curPerim;
+                  if (futPerim - curPerim < perimChange) {
+                     perimChange = futPerim - curPerim;
+                     bestTrade = trade;
+                  }
+               }
+               makeTrade(trade);
+            }
+         }
+      }
+      if (bestTrade != null)  {
+         System.out.println("Clean Up Trade: " + bestTrade);
+         makeTrade(bestTrade);
+         lastTrade = bestTrade;
+         return true;
+      }
+      return false;
    }
    
    public void updateRepRatio(double repRatio)
