@@ -8,14 +8,17 @@ import java.awt.Point;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.lang.Math;
+import java.util.Random;
 
 public class Trader
 {
+   private static final int NUM_ITER = 500;
    private int[][] grid;
    private ArrayList<District> disList;
    private int disPop, totalPerim, highPerim;
    private double repRatio, popRatio;
    private TradeProp lastTrade = null;
+   private Random rand = new Random ();
    
    public Trader(int[][] grid, ArrayList<District> disList, int disPop, double popRatio)
    {
@@ -25,8 +28,6 @@ public class Trader
       this.popRatio = popRatio;
       
       totalPerim = calcPerim(disList);
-      //testOne(4);
-      //evaluateTrades(3, 2);
    }
    
    /**
@@ -54,23 +55,6 @@ public class Trader
       }
    }
    
-   /*
-      Tests to see if the cells bordering the specified distrct are being calculated
-      correctly.
-   */
-   private void testOne(int disNumber)
-   {
-      District temp = disList.get(disNumber);
-      ArrayList<District> borderDistricts = temp.getBorderDistricts(disList);
-      for (District dis : borderDistricts)  {
-         ArrayList<Point> border = temp.getBorderCells(dis);
-         for (Point cell : border)  {
-            System.out.println(cell);
-         }
-         System.out.println();
-      } 
-   } 
-   
    private int calcPerim(ArrayList<District> disList)
    {
       int temp = 0;
@@ -81,6 +65,42 @@ public class Trader
       return temp;
    }
    
+   /**
+      Runs a pre-determined number of simulations for solving the grid,
+      and then picks the result which has the lowest overall perimeter.
+   */
+   public void manySolve()
+   {
+      ArrayList<District> original = disList, bestList = disList;
+      int bestPerim = Integer.MAX_VALUE;
+    
+      System.out.println("Starting " + NUM_ITER + " simulations");
+      long start = System.currentTimeMillis();
+      for (int ndx = 0; ndx < NUM_ITER; ndx++)  {
+         ArrayList<District> temp = new ArrayList<District> ();
+         copyDisList(original, temp);
+         disList = temp;
+         
+         setRatio();
+         randomSolve();
+         int perim = calcPerim(disList);
+         //System.out.println("Attempt number: " + ndx + " | Total perim: " + perim);
+         if (perim < bestPerim) {
+            //System.out.println("New Best");
+            bestPerim = perim;
+            bestList = temp;
+         }
+         setRatio();
+      }
+      copyDisList(bestList, original);
+      setRatio();
+      long end = System.currentTimeMillis();
+      System.out.println("Execution Time: " + (((float)(end - start)) / 1000) + " seconds");
+   }
+   
+   /**
+      Makes one trade according to the deterministic algorithm.
+   */
    public void makeBestTrade()
    {
       int party = 1;
@@ -97,6 +117,7 @@ public class Trader
       if (disPop % 2 == 1) {
          targetAdd = 1;
       }
+      
       // Find the target ratio of representation to achieve.
       for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
          if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
@@ -146,6 +167,125 @@ public class Trader
    }
    
    /**
+      Makes a somewhat random sequence of trades to completely solve a grid.
+   */
+   public void randomSolve()
+   {
+      int party = 1;
+      double target = 0, close = popRatio, targetRatio;
+      double targetAdd = .5;
+      
+      if (disPop % 2 == 1) {
+         targetAdd = 1;
+      }
+      
+      // Find the target ratio of representation to achieve.
+      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
+         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
+            target += targetAdd;
+            close = Math.abs(target / disList.size() - popRatio);
+         }
+         else  {
+            ndx = disList.size() * 2;
+         }
+      }
+      targetRatio = target / disList.size();
+      
+      // Figure out which party to support.
+      if (targetRatio < repRatio)   {
+         party = 2;
+      }
+      
+      while (repRatio != targetRatio)  {
+         flipRandomDistrict(party);
+         setRatio();
+      }      
+   }
+   
+   /**
+      This method chooses a random district that the under-represented party is losing and flips it.
+   */
+   public void flipRandomDistrict(int party)
+   {  
+      // Pick the district to flip
+      ArrayList<District> partyLosing = new ArrayList<District> ();
+      for (District dis : disList)  {
+         if (party == 1 && dis.getBlueRep() <= .5) {
+            partyLosing.add(dis);
+         }
+         else if (party == 2 && dis.getRedRep() <= .5)   {
+            partyLosing.add(dis);
+         }
+      }
+      District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
+      flipDistrict(party, toFlip);
+   }
+   
+   /**
+      This method chooses a random district that the under-represented party is losing and flips it.
+   */
+   public void flipRandomDistrict()
+   {
+      int party = 1;
+      double target = 0, close = popRatio, targetRatio;
+      double targetAdd = .5;
+      
+      if (disPop % 2 == 1) {
+         targetAdd = 1;
+      }
+      
+      // Find the target ratio of representation to achieve.
+      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
+         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
+            target += targetAdd;
+            close = Math.abs(target / disList.size() - popRatio);
+         }
+         else  {
+            ndx = disList.size() * 2;
+         }
+      }
+      targetRatio = target / disList.size();
+      
+      // Figure out which party to support.
+      if (targetRatio < repRatio)   {
+         party = 2;
+      }
+  
+      // Pick the district to flip
+      if (repRatio != targetRatio)  {
+         ArrayList<District> partyLosing = new ArrayList<District> ();
+         for (District dis : disList)  {
+            if (party == 1 && dis.getBlueRep() <= .5) {
+               partyLosing.add(dis);
+            }
+            else if (party == 2 && dis.getRedRep() <= .5)   {
+               partyLosing.add(dis);
+            }
+         }
+         District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
+         flipDistrict(party, toFlip);
+      } 
+   }
+   
+   /**
+      This method flips the supplied district in favor of the under-represented party.
+      Returns true if the district was able to be flipped, false otherwise.
+   */
+   public boolean flipDistrict(int party, District dis)
+   {
+      boolean madeTrade = true;
+      
+      while (((party == 1 && dis.getBlueRep() <= .5) ||
+       (party == 2 && dis.getRedRep() <= .5)) && madeTrade)   {
+         madeTrade = evaluateRandomTrade(dis, party);
+         while (cleanUpTrade())  {
+            ;
+         }
+      }
+      return madeTrade;
+   }
+   
+   /**
       Evaluates all possible trades for the specified district for
       the benefit of the specified party. 
       "party" is 1 for the Blue party and 2 for the Red party.
@@ -157,21 +297,22 @@ public class Trader
       ArrayList<TradeProp> tradeList = new ArrayList<TradeProp> ();
       for (District dis : borderDistricts)  {
          tradeList.add(pickBestTrade(temp, dis, party));
-         //System.out.println(tradeList.get(tradeList.size() - 1));
       }
       
       double value = -100, tempVal;
       TradeProp bestTrade = tradeList.get(0);
       for (TradeProp trade : tradeList)   {        
          if (trade != null && party == 1)   {
-            tempVal = Math.abs(trade.theirDis.getBlueTradeRep() - .5) * 100 - trade.perimChange;
+            tempVal = tradeValue(Math.abs(trade.theirDis.getBlueTradeRep() - .5),
+             trade.perimChange);
             if (tempVal > value) {
                bestTrade = trade;
                value = tempVal;
             }
          }
          else if (trade != null && party == 2)  {
-            tempVal = Math.abs(trade.theirDis.getRedTradeRep() - .5) * 100 - trade.perimChange;
+            tempVal = tradeValue(Math.abs(trade.theirDis.getRedTradeRep() - .5),
+             trade.perimChange);
             if (tempVal > value) {
                bestTrade = trade;
                value = tempVal;
@@ -187,6 +328,34 @@ public class Trader
       }    
       return false;
    }
+   
+   /**
+      Functions the same way as the evaluate trades method except that it
+      choses a random district to trade with.
+      Returns true if a trade was made, false otherwise.
+   */
+   private boolean evaluateRandomTrade(District temp, int party)
+   {
+      ArrayList<District> borderDistricts = temp.getBorderDistricts(disList);
+      ArrayList<TradeProp> tradeList = new ArrayList<TradeProp> ();
+      
+      for (District dis : borderDistricts)  {
+         tradeList.add(pickBestTrade(temp, dis, party));
+      }
+      while (tradeList.size() > 0)  {
+         int tradeIndex = rand.nextInt(tradeList.size());
+         
+         TradeProp randomTrade = tradeList.remove(tradeIndex);
+         if (randomTrade != null)   {
+            //System.out.println("Random Trade: " + randomTrade);
+            makeTrade(randomTrade);
+            lastTrade = randomTrade;
+            return true;
+         }
+      }
+      return false;
+   }
+            
    
    /**
       For a specified district, picks the best possible trade between ourDis and theirDis.
@@ -281,7 +450,7 @@ public class Trader
          }
       }
       if (bestTrade != null)  {
-         System.out.println("Clean Up Trade: " + bestTrade);
+         //System.out.println("Clean Up Trade: " + bestTrade);
          makeTrade(bestTrade);
          lastTrade = bestTrade;
          return true;
@@ -299,6 +468,59 @@ public class Trader
    {
       if (lastTrade != null)  {
          makeTrade(lastTrade);
+      }
+   }
+   
+   private double tradeValue(double repToFlip, double perimChange)
+   {
+      double retVal = 0;
+      
+      if (repToFlip >= .1) {
+         retVal = 100;
+      }
+      else if (repToFlip >= .05)  {
+         retVal = 50;
+      }
+      retVal -= perimChange;
+      return retVal;
+   }
+   
+   /*
+      Updates the ratio of Blue representatives relative to the number of districts.
+   */
+   public void setRatio()
+   {
+      double numB = 0, numR = 0;
+      
+      for (District d1 : disList)   {
+         if (d1.getRep().equals("Blue"))  {
+            numB++;
+         }
+         else if (d1.getRep().equals("Red")) {
+            numR++;
+         }
+         else   {
+            numB += .5;
+            numR += .5;
+         }
+         repRatio = numB / disList.size();
+      }
+   }
+   
+   /**
+      Makes a copy of a list of districts and overrides the copyList argument.
+   */
+   public void copyDisList(ArrayList<District> listToCopy, ArrayList<District> copyList)
+   {
+      copyList.clear();
+      
+      for (District dis : listToCopy)  {
+         ArrayList<Point> newZone = new ArrayList<Point> ();
+         for (Point p1 : dis.getZone())   {
+            newZone.add(p1);
+         }
+         District newDis = new District(grid, newZone);
+         copyList.add(newDis);
       }
    }
 }

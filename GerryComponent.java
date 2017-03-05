@@ -69,7 +69,25 @@ public class GerryComponent extends JComponent
 	{
 	   	trade.updateRepRatio(divider.getRepRatio());
 	   	trade.undoTrade();
-	 }
+	}
+	
+	public void flipRandomDistrict()
+	{
+	   trade.updateRepRatio(divider.getRepRatio());
+	   trade.flipRandomDistrict();
+	}
+	
+	public void randomSolve()
+	{
+	   trade.updateRepRatio(divider.getRepRatio());
+	   trade.randomSolve();
+	}
+	
+	public void manySolve()
+	{
+	   trade.updateRepRatio(divider.getRepRatio());
+	   trade.manySolve();
+	}
 	
 	public void paintComponent(Graphics g)
 	{
