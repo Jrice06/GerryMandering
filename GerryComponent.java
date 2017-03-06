@@ -35,7 +35,7 @@ public class GerryComponent extends JComponent
 	   if (datafile.equals(""))  {
          for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
 		      for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {
-		         grid[ndxA][ndxB] = rand.nextInt(2) + 1;
+		         grid[ndxA][ndxB] = getRandomVal();
 		      }
 		   }
 		}
@@ -89,6 +89,27 @@ public class GerryComponent extends JComponent
 	   trade.manySolve();
 	}
 	
+	public void reset()
+	{
+		divider = new Divider(grid, disList.size(), grid.length * grid[0].length);
+	   this.disList = divider.getDisList();
+	   	trade = new Trader(grid, disList, grid.length * grid[0].length / disList.size(),
+	    divider.getPopRatio());
+	}
+	
+	public int getRandomVal()
+	{
+	   int val = rand.nextInt(3) + 1;
+	   
+	   if (val == 3)  {
+	      val = 2;
+	   }
+	   return val;
+	   
+	   // Uncomment to make the choice 50-50
+	   //return rand.nextInt(2) + 1;
+	}
+	
 	public void paintComponent(Graphics g)
 	{
 		Graphics2D g2 = (Graphics2D) g;
@@ -112,5 +133,6 @@ public class GerryComponent extends JComponent
 		}
 		divider.drawBounds(g2, rexSize);
 		System.out.println(divider);
+	   System.out.println("-----------------------------------------------------");
 	}
 }

@@ -37,7 +37,6 @@ public class Divider
       
       blu = 100 * (blue / pop);
       red = 100 - blu;
-      System.out.println((int) blu + "% blue, " + (int) red + "% red");
    }
    
    public void initDistricts()
@@ -362,7 +361,6 @@ public class Divider
    {
       totalPerim = 0;
       for (District d1 : disList)   {
-         //System.out.println(d1);
          int newPerim = d1.drawDis(g2, rexSize);
          if (highPerim < newPerim)  {
             highPerim = newPerim;
@@ -376,9 +374,9 @@ public class Divider
       setRatio();
       int ratioB = (int) (repRatio * 100), ratioR = 100 - ratioB;
       
-      return ""  + ratioB + "% blue representation, " + ratioR + "% red representation"
-       + "\nPerimeter: " + totalPerim + "\nAverage Perimeter: " + totalPerim / numDis
-       + "\nHighest Perimeter: " + highPerim;
+      return "" + (int) blu + "% blue " + (int) red + "% red\n"  + ratioB + "% blue representation, "
+       + ratioR + "% red representation" + "\nPerimeter: " + totalPerim +
+        "\nAverage Perimeter: " + totalPerim / numDis + "\nHighest Perimeter: " + highPerim;
    }
    
    public ArrayList<District> getDisList()

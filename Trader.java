@@ -65,6 +65,18 @@ public class Trader
       return temp;
    }
    
+   public int calcHighPerim(ArrayList<District> disList)
+   {
+      int highPerim = disList.get(0).getPerim();
+      for (District d1 : disList)   {
+         int newPerim = d1.getPerim();
+         if (highPerim < newPerim)  {
+            highPerim = newPerim;
+         }
+      }
+      return highPerim;
+   }
+   
    /**
       Runs a pre-determined number of simulations for solving the grid,
       and then picks the result which has the lowest overall perimeter.
@@ -72,9 +84,16 @@ public class Trader
    public void manySolve()
    {
       ArrayList<District> original = disList, bestList = disList;
-      int bestPerim = Integer.MAX_VALUE;
-    
-      System.out.println("Starting " + NUM_ITER + " simulations");
+      int bestPerim = Integer.MAX_VALUE / 3, bestHighPerim = Integer.MAX_VALUE / 3;
+      int count = 0;
+      double targetRatio, party;
+      
+      ArrayList<Double> val = getTargetRatio();
+      party = val.get(0);
+      targetRatio = val.get(1);
+      
+      System.out.println("Target ratio: " + ((int) (targetRatio * 100)) + "%");
+      System.out.println("Tolerating " + NUM_ITER + " simulations of failure");
       long start = System.currentTimeMillis();
       for (int ndx = 0; ndx < NUM_ITER; ndx++)  {
          ArrayList<District> temp = new ArrayList<District> ();
@@ -82,20 +101,59 @@ public class Trader
          disList = temp;
          
          setRatio();
-         randomSolve();
-         int perim = calcPerim(disList);
-         //System.out.println("Attempt number: " + ndx + " | Total perim: " + perim);
-         if (perim < bestPerim) {
-            //System.out.println("New Best");
+         randomSolve(targetRatio, (int) party);
+         int perim = calcPerim(disList), highPerim = calcHighPerim(disList);
+         
+         if (perim + highPerim < bestPerim + bestHighPerim) {
+            System.out.println("New Best! Attempt number: " + count + " | Total perim: " + perim
+             + " | High Perim: " + highPerim);
             bestPerim = perim;
+            bestHighPerim = highPerim;
             bestList = temp;
+            ndx = 0;
          }
          setRatio();
+         count++;
       }
       copyDisList(bestList, original);
       setRatio();
       long end = System.currentTimeMillis();
       System.out.println("Execution Time: " + (((float)(end - start)) / 1000) + " seconds");
+   }
+   
+   /**
+      Returns an arraylist of two elements, the first is the party to support
+      and the second is the target ratio.
+   */
+   public ArrayList<Double> getTargetRatio()
+   {
+      double target = 0, close = popRatio, targetRatio, party = 1;
+      double targetAdd = .5;
+      ArrayList<Double> ret = new ArrayList<Double> ();
+      
+      if (disPop % 2 == 1) {
+         targetAdd = 1;
+      }
+      
+      // Find the target ratio of representation to achieve.
+      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
+         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
+            target += targetAdd;
+            close = Math.abs(target / disList.size() - popRatio);
+         }
+         else  {
+            ndx = disList.size() * 2;
+         }
+      }
+      targetRatio = target / disList.size();
+      
+      // Figure out which party to support.
+      if (targetRatio < repRatio)   {
+         party = 2;
+      }
+      ret.add(party);
+      ret.add(targetRatio);
+      return ret;
    }
    
    /**
@@ -128,9 +186,6 @@ public class Trader
             ndx = disList.size() * 2;
          }
       }
-      System.out.println("---------------------------------------------------------------");
-      System.out.println((int) (popRatio * 100) + "% blue, " +
-       (int) ((1 - popRatio) * 100) + "% red");
       targetRatio = target / disList.size();
       
       System.out.println("TargetRatio: " + (int) (targetRatio * 100) + "% blue");
@@ -169,35 +224,24 @@ public class Trader
    /**
       Makes a somewhat random sequence of trades to completely solve a grid.
    */
-   public void randomSolve()
-   {
-      int party = 1;
-      double target = 0, close = popRatio, targetRatio;
-      double targetAdd = .5;
-      
-      if (disPop % 2 == 1) {
-         targetAdd = 1;
-      }
-      
-      // Find the target ratio of representation to achieve.
-      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
-         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
-            target += targetAdd;
-            close = Math.abs(target / disList.size() - popRatio);
-         }
-         else  {
-            ndx = disList.size() * 2;
-         }
-      }
-      targetRatio = target / disList.size();
-      
-      // Figure out which party to support.
-      if (targetRatio < repRatio)   {
-         party = 2;
-      }
-      
+   public void randomSolve(double targetRatio, int party)
+   {  
       while (repRatio != targetRatio)  {
          flipRandomDistrict(party);
+         setRatio();
+      }      
+   }
+   
+   /**
+      Makes a somewhat random sequence of trades to completely solve a grid.
+   */
+   public void randomSolve()
+   {
+      ArrayList<Double> val = getTargetRatio();
+      double targetRatio = val.get(1), party = val.get(0);
+      
+      while (repRatio != targetRatio)  {
+         flipRandomDistrict((int) party);
          setRatio();
       }      
    }
@@ -210,10 +254,8 @@ public class Trader
       // Pick the district to flip
       ArrayList<District> partyLosing = new ArrayList<District> ();
       for (District dis : disList)  {
-         if (party == 1 && dis.getBlueRep() <= .5) {
-            partyLosing.add(dis);
-         }
-         else if (party == 2 && dis.getRedRep() <= .5)   {
+         if ((party == 1 && dis.getBlueRep() <= .5) ||
+          (party == 2 && dis.getRedRep() <= .5)) {
             partyLosing.add(dis);
          }
       }
@@ -368,7 +410,7 @@ public class Trader
       ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
       ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
          
-      int perimChange = 10;
+      int perimChange = 100;
          
       for (Point theirCell : theirBorder)  {
          for (Point ourCell : ourBorder)  {
@@ -432,7 +474,7 @@ public class Trader
          for (Point ourCell : ourBorder)  {
             if (grid[(int) ourCell.getX()][(int) ourCell.getY()] ==
              grid[(int) theirCell.getX()][(int) theirCell.getY()]) {
-             
+               
                TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;
                   

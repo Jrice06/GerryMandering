@@ -16,7 +16,7 @@ public class GerryFrame extends JFrame
    private static final int FRAME_WIDTH = 800, FRAME_HEIGHT = 800;
 	private GerryComponent scene;
 	private boolean trade = false, undo = false, random = false, evaluate = false,
-	 simulation = false;
+	 simulation = false, reset = false;
 	
 	class TimerListener implements ActionListener
 	{
@@ -42,7 +42,11 @@ public class GerryFrame extends JFrame
             scene.manySolve();
             scene.repaint();
          }
-         trade = undo = random = evaluate = simulation = false;
+         if (reset)  {
+            scene.reset();
+            scene.repaint();
+         }
+         trade = undo = random = evaluate = simulation = reset = false;
 		}
 	}
 	
@@ -67,6 +71,9 @@ public class GerryFrame extends JFrame
 			}
 			else if (key.equals("S"))  {
 			   simulation = true;
+			}
+			else if (key.equals("X"))  {
+			   reset = true;
 			}
 		}
 		
