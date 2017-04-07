@@ -114,7 +114,7 @@ public class Divider
          startX = j;
          if (ndx % 2 == 0) {
             while (i < grid[0].length - 2)  {
-               zone.add(new Point(j, i));
+               addCell(zone, new Point(j, i));
                if (i % 2 == 0)   {
                   j++;
                }
@@ -138,7 +138,7 @@ public class Divider
             
             lastMove = "right";
             while (j < startX + widths[ndx])   {
-               zone.add(new Point(j, i));
+               addCell(zone, new Point(j, i));
                                  
                if ((i == grid[0].length - 2 || i == 0) && lastMove.equals("right"))  {
                   i++;
@@ -163,7 +163,7 @@ public class Divider
          else  {
             lastMove = "right";
             while (j < startX + widths[ndx])   {
-               zone.add(new Point(j, i));
+               addCell(zone, new Point(j, i));
                                  
                if ((i == grid[0].length - 2 || i == 0) && lastMove.equals("right"))  {
                   i++;
@@ -187,7 +187,7 @@ public class Divider
             j--;
             
             while (i >= 0)  {
-               zone.add(new Point(j, i));                 
+               addCell(zone, new Point(j, i));                
                if (i % 2 == 1)   {
                   j--;
                }
@@ -223,7 +223,7 @@ public class Divider
       for (int ndx = 0; disList.size() < numDis; ndx++)   {
          startX = j;
          while ((i < grid[0].length - 2 && ndx % 2 == 0) || (i > 1 && ndx % 2 == 1))  {
-            zone.add(new Point(j, i));
+            addCell(zone, new Point(j, i));
             if ((i % 2 == 0 && ndx % 2 == 0) || (i % 2 == 1 && ndx % 2 == 1))   {
                j++;
             }
@@ -257,7 +257,7 @@ public class Divider
          // This deals with the problem of the last two rows of the snake
          String lastMove = "right";
          while (j < startX + widths[ndx])   {
-            zone.add(new Point(j, i));       
+            addCell(zone, new Point(j, i));    
             if ((i == grid[0].length - 2 || i == 0) && lastMove.equals("right"))  {
                i++;
                lastMove = "down";
@@ -293,7 +293,7 @@ public class Divider
             if (disCount == 0)   {
                zone = new ArrayList<Point> ();
             }
-            zone.add(new Point(j, i));
+            addCell(zone, new Point(j, i));
             disCount++;
                 
             if (i % 2 == 0)   {
@@ -333,6 +333,13 @@ public class Divider
          }
          j++;
       }          
+   }
+   
+   private void addCell(ArrayList<Point> zone, Point p1)
+   {
+      if (grid[(int) p1.getX()][(int) p1.getY()] != 0)   {
+         zone.add(p1);
+      }
    }
       
    /*

@@ -53,10 +53,11 @@ public class GerryComponent extends JComponent
 	      }
 	   }
 	    
-	   divider = new Divider(grid, numDis, grid.length * grid[0].length);
+	   divider = new Divider(grid, numDis, getNumCells());
 	   this.disList = divider.getDisList();
-	   trade = new Trader(grid, disList, grid.length * grid[0].length / numDis,
+	   trade = new Trader(grid, disList, getNumCells() / numDis,
 	    divider.getPopRatio());
+	   cleanUpGrid();
 	}
 	
 	public void makeTrade()
@@ -91,10 +92,11 @@ public class GerryComponent extends JComponent
 	
 	public void reset()
 	{
-		divider = new Divider(grid, disList.size(), grid.length * grid[0].length);
+		divider = new Divider(grid, disList.size(), getNumCells());
 	   this.disList = divider.getDisList();
-	   	trade = new Trader(grid, disList, grid.length * grid[0].length / disList.size(),
+	   	trade = new Trader(grid, disList, getNumCells() / disList.size(),
 	    divider.getPopRatio());
+	   	cleanUpGrid();
 	}
 	
 	public int getRandomVal()
@@ -110,6 +112,39 @@ public class GerryComponent extends JComponent
 	   //return rand.nextInt(2) + 1;
 	}
 	
+	/**
+	   This method returns the number of cells in this grid which 
+	   belong to a particular party.
+	*/
+	private int getNumCells()
+	{
+	   int ret = 0;
+	   
+	   for (int i = 0; i < grid.length; i++)  {
+	      for (int j = 0; j < grid[0].length; j++)  {
+	         if (grid[i][j] != 0) {
+	            ret++;
+	         }
+	      }
+	   }
+	   return ret;
+	}
+	
+	/**
+	   This function is called after the grid has been initialized to make any trades
+	   which reduce overall perimeter.
+	*/
+	private void cleanUpGrid()
+	{
+	   for (int i = 0; i < disList.size(); i++)  {
+	      for (int j = 0; j < i; j++)   {  
+	   	      while (trade.cleanUpTrade(disList.get(i), disList.get(j)))  {
+	            ;
+	         }
+	      }
+	   }
+	}
+	
 	public void paintComponent(Graphics g)
 	{
 		Graphics2D g2 = (Graphics2D) g;
@@ -123,7 +158,7 @@ public class GerryComponent extends JComponent
 		         g2.setColor(Color.red);
 		      }
 		      else  {
-		         g2.setColor(Color.black);
+		         g2.setColor(Color.white);
 		      }
 		      
 		      g2.fill(new Rectangle(rexSize * (ndxA + 1), rexSize * (ndxB + 1), rexSize, rexSize));

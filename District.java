@@ -100,6 +100,17 @@ public class District
       return zone.contains(spot);
    }
    
+   public int getNumLosingCells(int party)
+   {
+      if (party == 1 && getBlueRep() <= .5)  {
+         return (int) (zone.size() * getBlueRep());
+      }
+      else if (party == 2 && getRedRep() <= .5) {
+         return (int) (zone.size() * getRedRep());
+      }
+      return 0;
+   }
+   
    public int drawDis(Graphics2D g2, int rexSize)
    {
       int totalPerim = 0;
@@ -309,5 +320,54 @@ public class District
        && !island.contains(new Point(x, y - 1)))   {
          checkNear(new Point(x, y - 1), island);
       }
+   }
+   
+   /**
+      Returns a double between 0 and 1 which represents the weight attached
+      to this district when choosing a district to try to flip.
+   */
+   public double flipWeight(int numBlueCell, int party)
+   {
+      double ret = 0;
+      
+      if (party == 1)   {
+         ret = getBlueRep() * zone.size() / numBlueCell;
+      }
+      else if (party == 2) {
+         ret = getRedRep() * zone.size() / numBlueCell;
+      }
+      return ret;
+   }
+   
+   /**
+      Returns a double between 0 and 1 which represents the weight attached
+      to this district when choosing a district to trade with.
+   */
+   public double tradeWeight(int numNonComp, int numComp, int party)
+   {
+      double ret = 0, totalWeight = numNonComp + .5 * ((double) numComp);
+      
+      if ((party == 1 && Math.abs(getBlueTradeRep() - .5) < .1)
+       || (party == 2 && Math.abs(getRedTradeRep() - .5) < .1))   {
+         ret = .5 / totalWeight;
+      }
+      else  {
+         ret = 1 / totalWeight;
+      }
+      return ret;
+      
+   }
+   
+   public boolean isCompetitive(int party)
+   {
+      boolean ret = false;
+      
+      if (party == 1)   {
+         ret = Math.abs(getBlueTradeRep() - .5) < .1;
+      }
+      else  {
+         ret = Math.abs(getRedTradeRep() - .5) < .1;
+      }
+      return ret;
    }
 }

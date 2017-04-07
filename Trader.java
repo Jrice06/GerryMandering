@@ -166,7 +166,7 @@ public class Trader
       double targetAdd = .5;
       
       if (lastTrade != null)  {
-         boolean needClean = cleanUpTrade();
+         boolean needClean = cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis);
          if (needClean) {
             return;
          }
@@ -250,16 +250,28 @@ public class Trader
       This method chooses a random district that the under-represented party is losing and flips it.
    */
    public void flipRandomDistrict(int party)
-   {  
-      // Pick the district to flip
+   {
+      int numBlueCell = 0;
       ArrayList<District> partyLosing = new ArrayList<District> ();
       for (District dis : disList)  {
          if ((party == 1 && dis.getBlueRep() <= .5) ||
           (party == 2 && dis.getRedRep() <= .5)) {
             partyLosing.add(dis);
+            numBlueCell += dis.getNumLosingCells(party);
          }
       }
-      District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
+      
+      double randNum = rand.nextDouble();
+      int ndx = -1;
+      
+      // Pick the district to flip
+      while (randNum > 0 ) {
+         ndx++;
+         randNum -= partyLosing.get(ndx).flipWeight(numBlueCell, party);
+      }
+      District toFlip = partyLosing.get(ndx);
+      
+      //District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
       flipDistrict(party, toFlip);
    }
    
@@ -320,7 +332,7 @@ public class Trader
       while (((party == 1 && dis.getBlueRep() <= .5) ||
        (party == 2 && dis.getRedRep() <= .5)) && madeTrade)   {
          madeTrade = evaluateRandomTrade(dis, party);
-         while (cleanUpTrade())  {
+         while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis))  {
             ;
          }
       }
@@ -378,24 +390,39 @@ public class Trader
    */
    private boolean evaluateRandomTrade(District temp, int party)
    {
+      int numComp = 0;
       ArrayList<District> borderDistricts = temp.getBorderDistricts(disList);
       ArrayList<TradeProp> tradeList = new ArrayList<TradeProp> ();
+      ArrayList<District> validDistricts = new ArrayList<District> ();
       
       for (District dis : borderDistricts)  {
-         tradeList.add(pickBestTrade(temp, dis, party));
-      }
-      while (tradeList.size() > 0)  {
-         int tradeIndex = rand.nextInt(tradeList.size());
-         
-         TradeProp randomTrade = tradeList.remove(tradeIndex);
-         if (randomTrade != null)   {
-            //System.out.println("Random Trade: " + randomTrade);
-            makeTrade(randomTrade);
-            lastTrade = randomTrade;
-            return true;
+         TradeProp prop = pickBestTrade(temp, dis, party);
+         if (prop != null) {
+            tradeList.add(prop);
+            validDistricts.add(dis);
+            if (dis.isCompetitive(party)) {
+               numComp++;
+            }
          }
       }
-      return false;
+      
+      if (tradeList.size() == 0) {
+         return false;
+      }
+      double randNum = rand.nextDouble();
+      int ndx = -1;
+         
+      while (randNum > 0)  {
+         ndx++;
+         randNum -=
+          validDistricts.get(ndx).tradeWeight(validDistricts.size() - numComp, numComp, party);
+      }
+      TradeProp randomTrade = tradeList.get(ndx);
+      //TradeProp randomTrade = tradeList.get(rand.nextInt(tradeList.size()));
+      
+      makeTrade(randomTrade);
+      lastTrade = randomTrade;
+      return true;   
    }
             
    
@@ -462,10 +489,9 @@ public class Trader
       perimeter changes.
       Returns true if a clean up trade was made, false otherwise. 
   */
-   public boolean cleanUpTrade()
+   public boolean cleanUpTrade(District ourDis, District theirDis)
    {
       TradeProp bestTrade = null;
-      District ourDis = lastTrade.ourDis, theirDis = lastTrade.theirDis;
       ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
       ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
       int perimChange = 0;
