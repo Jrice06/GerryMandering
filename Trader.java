@@ -166,7 +166,7 @@ public class Trader
       double targetAdd = .5;
       
       if (lastTrade != null)  {
-         boolean needClean = cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis);
+         boolean needClean = cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false);
          if (needClean) {
             return;
          }
@@ -233,20 +233,6 @@ public class Trader
    }
    
    /**
-      Makes a somewhat random sequence of trades to completely solve a grid.
-   */
-   public void randomSolve()
-   {
-      ArrayList<Double> val = getTargetRatio();
-      double targetRatio = val.get(1), party = val.get(0);
-      
-      while (repRatio != targetRatio)  {
-         flipRandomDistrict((int) party);
-         setRatio();
-      }      
-   }
-   
-   /**
       This method chooses a random district that the under-represented party is losing and flips it.
    */
    public void flipRandomDistrict(int party)
@@ -276,52 +262,6 @@ public class Trader
    }
    
    /**
-      This method chooses a random district that the under-represented party is losing and flips it.
-   */
-   public void flipRandomDistrict()
-   {
-      int party = 1;
-      double target = 0, close = popRatio, targetRatio;
-      double targetAdd = .5;
-      
-      if (disPop % 2 == 1) {
-         targetAdd = 1;
-      }
-      
-      // Find the target ratio of representation to achieve.
-      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
-         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
-            target += targetAdd;
-            close = Math.abs(target / disList.size() - popRatio);
-         }
-         else  {
-            ndx = disList.size() * 2;
-         }
-      }
-      targetRatio = target / disList.size();
-      
-      // Figure out which party to support.
-      if (targetRatio < repRatio)   {
-         party = 2;
-      }
-  
-      // Pick the district to flip
-      if (repRatio != targetRatio)  {
-         ArrayList<District> partyLosing = new ArrayList<District> ();
-         for (District dis : disList)  {
-            if (party == 1 && dis.getBlueRep() <= .5) {
-               partyLosing.add(dis);
-            }
-            else if (party == 2 && dis.getRedRep() <= .5)   {
-               partyLosing.add(dis);
-            }
-         }
-         District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
-         flipDistrict(party, toFlip);
-      } 
-   }
-   
-   /**
       This method flips the supplied district in favor of the under-represented party.
       Returns true if the district was able to be flipped, false otherwise.
    */
@@ -332,7 +272,7 @@ public class Trader
       while (((party == 1 && dis.getBlueRep() <= .5) ||
        (party == 2 && dis.getRedRep() <= .5)) && madeTrade)   {
          madeTrade = evaluateRandomTrade(dis, party);
-         while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis))  {
+         while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false))  {
             ;
          }
       }
@@ -485,11 +425,11 @@ public class Trader
    }
    
    /**
-      Looks for trades that have no impact on representation but result in negative
-      perimeter changes.
+      If party is false, looks for trades that have no impact on representation but result in negative
+      perimeter changes.  If party is true, then any trade can be made.
       Returns true if a clean up trade was made, false otherwise. 
   */
-   public boolean cleanUpTrade(District ourDis, District theirDis)
+   public boolean cleanUpTrade(District ourDis, District theirDis, boolean party)
    {
       TradeProp bestTrade = null;
       ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
@@ -498,8 +438,8 @@ public class Trader
       
       for (Point theirCell : theirBorder)  {
          for (Point ourCell : ourBorder)  {
-            if (grid[(int) ourCell.getX()][(int) ourCell.getY()] ==
-             grid[(int) theirCell.getX()][(int) theirCell.getY()]) {
+            if (party || (grid[(int) ourCell.getX()][(int) ourCell.getY()] ==
+             grid[(int) theirCell.getX()][(int) theirCell.getY()])) {
                
                TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;

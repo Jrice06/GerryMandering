@@ -21,9 +21,10 @@ public class Divider
       this.numDis = numDis;
       this.pop = numSquare;
       this.disPop = pop / numDis;
+      disList = new ArrayList<District> (); 
       
-      //initDistricts();
-      snakeInit();
+      takeBestSnake();
+      //snakeInit();
       setRatio();
       
       double blue = 0;
@@ -39,21 +40,31 @@ public class Divider
       red = 100 - blu;
    }
    
-   public void initDistricts()
+   // Try two versions of the complex snake without remainder and take the
+   // result with the lowest (overall perimeter + highest district perimeter).
+   private void takeBestSnake()
    {
-      disList = new ArrayList<District> ();
+      int perimV, perimH;
       
-      for (int ndx = 0; ndx < numDis; ndx++) {
-         ArrayList<Point> zone = new ArrayList<Point> ();
-         for (int i = ndx * disPop; i < (ndx + 1) * disPop; i++) {
-            int y = i / grid.length, x = i % grid.length;
-            if (y % 2 == 1)   {
-               x = grid.length - x - 1;
-            }
-            zone.add(new Point(x, y));
-         }
-         
-         disList.add(new District(grid, zone));
+      snakeInit();
+      perimV = calcPerim() + calcHighPerim();
+      boolean isolatedV = gridHasIsolation();
+      disList = new ArrayList<District> (); 
+      
+      reflectGrid();
+      snakeInit();
+      reflectGrid();
+      perimH = calcPerim() + calcHighPerim();
+      
+      System.out.print("Vertical Snake: " + perimV);
+      System.out.println("   Horizontal Snake: " + perimH);
+      if ((perimV < perimH && !isolatedV) || gridHasIsolation()) {
+         disList = new ArrayList<District> (); 
+         snakeInit();
+         System.out.println("Using vertical snake");
+      }
+      else  {
+         System.out.println("Using horizontal snake");
       }
    }
    
@@ -104,8 +115,7 @@ public class Divider
    }  
    
    private void evenEvenSnake(int[] widths)
-   {
-      disList = new ArrayList<District> ();    
+   {   
       int disCount = 0, j = 0, i = 0, startX = 0;
       ArrayList<Point> zone = new ArrayList<Point> ();
       String lastMove = "right";
@@ -216,7 +226,6 @@ public class Divider
    
    private void evenOddSnake(int[] widths)
    {
-      disList = new ArrayList<District> ();    
       int disCount = 0, j = 0, i = 0, startX;
       ArrayList<Point> zone = new ArrayList<Point> ();
      
@@ -281,8 +290,7 @@ public class Divider
    }
    
    private void oddSnake(int[] widths)
-   {
-      disList = new ArrayList<District> ();    
+   {  
       int disCount = 0, j = 0, i = 0;
       ArrayList<Point> zone = new ArrayList<Point> ();
      
@@ -403,6 +411,59 @@ public class Divider
       setRatio();
       return repRatio;
    }
-} 
    
+   /**
+      Interchange the x any y coordinates of the grid and the district zones.
+   */
+   private void reflectGrid()
+   {
+      int[][] newGrid = new int[grid[0].length][grid.length];
+      
+      for (int i = 0; i < grid[0].length; i++)  {
+         for (int j = 0; j < grid.length; j++)  {
+            newGrid[i][j] = grid[j][i];
+         }
+      }
+      grid = newGrid;
+      
+      // Swap the district zones
+      for (District dis: disList)   {
+         dis.swapCoords(grid);
+      }
+            
+   }
    
+   private int calcPerim()
+   {
+      int temp = 0;
+      
+      for (District dis : disList)  {
+         temp += dis.getPerim();
+      }
+      return temp;
+   }
+   
+   public int calcHighPerim()
+   {
+      int highPerim = disList.get(0).getPerim();
+      for (District d1 : disList)   {
+         int newPerim = d1.getPerim();
+         if (highPerim < newPerim)  {
+            highPerim = newPerim;
+         }
+      }
+      return highPerim;
+   }   
+   
+   private boolean gridHasIsolation()
+   {
+      boolean ret = false;
+      
+      for (District dis : disList)  {
+         if (dis.hasIsolation()) {
+            ret = true;
+         }
+      }
+      return ret;
+   }
+}  

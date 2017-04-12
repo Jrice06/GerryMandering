@@ -72,18 +72,6 @@ public class GerryComponent extends JComponent
 	   	trade.undoTrade();
 	}
 	
-	public void flipRandomDistrict()
-	{
-	   trade.updateRepRatio(divider.getRepRatio());
-	   trade.flipRandomDistrict();
-	}
-	
-	public void randomSolve()
-	{
-	   trade.updateRepRatio(divider.getRepRatio());
-	   trade.randomSolve();
-	}
-	
 	public void manySolve()
 	{
 	   trade.updateRepRatio(divider.getRepRatio());
@@ -138,7 +126,7 @@ public class GerryComponent extends JComponent
 	{
 	   for (int i = 0; i < disList.size(); i++)  {
 	      for (int j = 0; j < i; j++)   {  
-	   	      while (trade.cleanUpTrade(disList.get(i), disList.get(j)))  {
+	   	      while (trade.cleanUpTrade(disList.get(i), disList.get(j), true))  {
 	            ;
 	         }
 	      }

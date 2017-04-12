@@ -370,4 +370,19 @@ public class District
       }
       return ret;
    }
+   
+   /**
+      Interchange the x and y values for each cell in the zone arrayList.
+   */
+   public void swapCoords(int[][] newGrid)
+   {
+      grid = newGrid;
+      
+      ArrayList<Point> temp = new ArrayList<Point> ();
+      
+      for (Point p1 : zone)   {
+         temp.add(new Point((int) p1.getY(), (int) p1.getX()));
+      }
+      zone = temp;
+   }
 }
