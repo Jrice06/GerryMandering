@@ -10,12 +10,12 @@ import java.lang.Math;
 
 public class Divider
 {
-   private int[][] grid;
+   private double[][] grid;
    private ArrayList<District> disList;
    private int numDis, pop, disPop, totalPerim = 0, highPerim = 0;
    private double repRatio, blu, red;
    
-   public Divider(int[][] grid, int numDis, int numSquare)
+   public Divider(double[][] grid, int numDis, int numSquare)
    {
       this.grid = grid;
       this.numDis = numDis;
@@ -30,9 +30,7 @@ public class Divider
       double blue = 0;
       for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
 		   for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {	      
-		      if (grid[ndxA][ndxB] == 1)  {
-		         blue++;
-		      }
+		      blue += grid[ndxA][ndxB];
 		   }
       }
       
@@ -345,9 +343,10 @@ public class Divider
    
    private void addCell(ArrayList<Point> zone, Point p1)
    {
-      if (grid[(int) p1.getX()][(int) p1.getY()] != 0)   {
+      /*if (grid[(int) p1.getX()][(int) p1.getY()] != 0)   {
          zone.add(p1);
-      }
+      }*/
+      zone.add(p1);
    }
       
    /*
@@ -377,6 +376,7 @@ public class Divider
       totalPerim = 0;
       for (District d1 : disList)   {
          int newPerim = d1.drawDis(g2, rexSize);
+         
          if (highPerim < newPerim)  {
             highPerim = newPerim;
          }
@@ -417,7 +417,7 @@ public class Divider
    */
    private void reflectGrid()
    {
-      int[][] newGrid = new int[grid[0].length][grid.length];
+      double[][] newGrid = new double[grid[0].length][grid.length];
       
       for (int i = 0; i < grid[0].length; i++)  {
          for (int j = 0; j < grid.length; j++)  {

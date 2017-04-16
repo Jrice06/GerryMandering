@@ -13,14 +13,15 @@ import java.util.Random;
 public class Trader
 {
    private static final int NUM_ITER = 500;
-   private int[][] grid;
+   private static final double TRADE_THRESH = .00;
+   private double[][] grid;
    private ArrayList<District> disList;
    private int disPop, totalPerim, highPerim;
    private double repRatio, popRatio;
    private TradeProp lastTrade = null;
    private Random rand = new Random ();
    
-   public Trader(int[][] grid, ArrayList<District> disList, int disPop, double popRatio)
+   public Trader(double[][] grid, ArrayList<District> disList, int disPop, double popRatio)
    {
       this.grid = grid;
       this.disList = disList;
@@ -37,6 +38,7 @@ public class Trader
    private class TradeProp
    {
       int perimChange;
+      double voteChange;
       Point ourCell, theirCell;
       District ourDis, theirDis;
       
@@ -46,12 +48,15 @@ public class Trader
          this.theirCell = theirCell;
          this.ourDis = ourDis;
          this.theirDis = theirDis;
+         
+         this.voteChange = grid[(int) ourCell.getX()][(int) ourCell.getY()] -
+          grid[(int) theirCell.getX()][(int) theirCell.getY()];
       }
       
       public String toString()
       {
          return ourCell.toString() + " for " + theirCell.toString() +
-          " Perim Change: " + perimChange;
+          " Perim Change: " + perimChange + " Vote Change: " + String.format("%.3f", voteChange);
       }
    }
    
@@ -96,6 +101,7 @@ public class Trader
       System.out.println("Tolerating " + NUM_ITER + " simulations of failure");
       long start = System.currentTimeMillis();
       for (int ndx = 0; ndx < NUM_ITER; ndx++)  {
+         System.out.print(ndx + " ");
          ArrayList<District> temp = new ArrayList<District> ();
          copyDisList(original, temp);
          disList = temp;
@@ -105,6 +111,7 @@ public class Trader
          int perim = calcPerim(disList), highPerim = calcHighPerim(disList);
          
          if (perim + highPerim < bestPerim + bestHighPerim) {
+            System.out.println();
             System.out.println("New Best! Attempt number: " + count + " | Total perim: " + perim
              + " | High Perim: " + highPerim);
             bestPerim = perim;
@@ -131,18 +138,14 @@ public class Trader
       double targetAdd = .5;
       ArrayList<Double> ret = new ArrayList<Double> ();
       
-      if (disPop % 2 == 1) {
-         targetAdd = 1;
-      }
-      
       // Find the target ratio of representation to achieve.
       for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
-         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
+         if (Math.abs((target + targetAdd) / disList.size() - popRatio) < close)   {
             target += targetAdd;
             close = Math.abs(target / disList.size() - popRatio);
          }
          else  {
-            ndx = disList.size() * 2;
+            break;
          }
       }
       targetRatio = target / disList.size();
@@ -161,9 +164,8 @@ public class Trader
    */
    public void makeBestTrade()
    {
-      int party = 1;
-      double target = 0, close = popRatio, targetRatio;
-      double targetAdd = .5;
+      int party;
+      double targetRatio, close;
       
       if (lastTrade != null)  {
          boolean needClean = cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false);
@@ -171,29 +173,11 @@ public class Trader
             return;
          }
       }
-      
-      if (disPop % 2 == 1) {
-         targetAdd = 1;
-      }
-      
-      // Find the target ratio of representation to achieve.
-      for (int ndx = 0; ndx < disList.size() * 2; ndx++)  {
-         if (Math.abs((target + .5) / disList.size() - popRatio) < close)   {
-            target += targetAdd;
-            close = Math.abs(target / disList.size() - popRatio);
-         }
-         else  {
-            ndx = disList.size() * 2;
-         }
-      }
-      targetRatio = target / disList.size();
-      
+      ArrayList<Double> ret = getTargetRatio();
+      party = (int) ((double) ret.get(0));
+      targetRatio = ret.get(1);
       System.out.println("TargetRatio: " + (int) (targetRatio * 100) + "% blue");
-      // Figure out which party to support.
-      if (targetRatio < repRatio)   {
-         party = 2;
-      }
-      
+     
       if (repRatio != targetRatio)  {
          close = .5;
          District bestDis = disList.get(0);
@@ -237,13 +221,13 @@ public class Trader
    */
    public void flipRandomDistrict(int party)
    {
-      int numBlueCell = 0;
+      double numBluePop = 0;
       ArrayList<District> partyLosing = new ArrayList<District> ();
       for (District dis : disList)  {
          if ((party == 1 && dis.getBlueRep() <= .5) ||
           (party == 2 && dis.getRedRep() <= .5)) {
             partyLosing.add(dis);
-            numBlueCell += dis.getNumLosingCells(party);
+            numBluePop += dis.getNumLosingPop(party);
          }
       }
       
@@ -253,7 +237,7 @@ public class Trader
       // Pick the district to flip
       while (randNum > 0 ) {
          ndx++;
-         randNum -= partyLosing.get(ndx).flipWeight(numBlueCell, party);
+         randNum -= partyLosing.get(ndx).flipWeight(numBluePop, party);
       }
       District toFlip = partyLosing.get(ndx);
       
@@ -297,16 +281,16 @@ public class Trader
       TradeProp bestTrade = tradeList.get(0);
       for (TradeProp trade : tradeList)   {        
          if (trade != null && party == 1)   {
-            tempVal = tradeValue(Math.abs(trade.theirDis.getBlueTradeRep() - .5),
-             trade.perimChange);
+            tempVal = tradeValue(Math.abs(trade.theirDis.getBlueTradeRep(trade.voteChange) - .5),
+             trade);
             if (tempVal > value) {
                bestTrade = trade;
                value = tempVal;
             }
          }
          else if (trade != null && party == 2)  {
-            tempVal = tradeValue(Math.abs(trade.theirDis.getRedTradeRep() - .5),
-             trade.perimChange);
+            tempVal = tradeValue(Math.abs(trade.theirDis.getRedTradeRep(trade.voteChange) - .5),
+             trade);
             if (tempVal > value) {
                bestTrade = trade;
                value = tempVal;
@@ -340,7 +324,7 @@ public class Trader
          if (prop != null) {
             tradeList.add(prop);
             validDistricts.add(dis);
-            if (dis.isCompetitive(party)) {
+            if (dis.isCompetitive(party, prop.voteChange)) {
                numComp++;
             }
          }
@@ -355,7 +339,8 @@ public class Trader
       while (randNum > 0)  {
          ndx++;
          randNum -=
-          validDistricts.get(ndx).tradeWeight(validDistricts.size() - numComp, numComp, party);
+          validDistricts.get(ndx).tradeWeight(validDistricts.size() - numComp,
+           numComp, party, tradeList.get(ndx).voteChange);
       }
       TradeProp randomTrade = tradeList.get(ndx);
       //TradeProp randomTrade = tradeList.get(rand.nextInt(tradeList.size()));
@@ -377,24 +362,26 @@ public class Trader
       ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
       ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
          
-      int perimChange = 100;
+      double tradeValue = 100;
          
       for (Point theirCell : theirBorder)  {
          for (Point ourCell : ourBorder)  {
-            if (grid[(int) ourCell.getX()][(int) ourCell.getY()] == party ||
-             grid[(int) theirCell.getX()][(int) theirCell.getY()] != party) {
-               ;
-            }
-            else  {
+            double diff = grid[(int) ourCell.getX()][(int) ourCell.getY()] - 
+             grid[(int) theirCell.getX()][(int) theirCell.getY()];
+            if ((diff < -TRADE_THRESH && party == 1) || diff > TRADE_THRESH && party == 2)  {
                TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;
-                  
+               double voteChange = trade.voteChange;
+               
+               if (party == 1)   {
+                  voteChange *= -1;
+               } 
                makeTrade(trade);
                if (!ourDis.hasIsolation() && !theirDis.hasIsolation()) {
                   futPerim = calcPerim(disList);
                   trade.perimChange = futPerim - curPerim;
-                  if (futPerim - curPerim < perimChange) {
-                     perimChange = futPerim - curPerim;
+                  if (trade.perimChange / voteChange < tradeValue) {
+                     tradeValue = trade.perimChange / voteChange;
                      bestTrade = trade;
                   }
                }
@@ -438,8 +425,9 @@ public class Trader
       
       for (Point theirCell : theirBorder)  {
          for (Point ourCell : ourBorder)  {
-            if (party || (grid[(int) ourCell.getX()][(int) ourCell.getY()] ==
-             grid[(int) theirCell.getX()][(int) theirCell.getY()])) {
+            double diff = (grid[(int) ourCell.getX()][(int) ourCell.getY()] - 
+             grid[(int) theirCell.getX()][(int) theirCell.getY()]);
+            if (party || Math.abs(diff) < TRADE_THRESH) {
                
                TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;
@@ -458,7 +446,6 @@ public class Trader
          }
       }
       if (bestTrade != null)  {
-         //System.out.println("Clean Up Trade: " + bestTrade);
          makeTrade(bestTrade);
          lastTrade = bestTrade;
          return true;
@@ -479,7 +466,11 @@ public class Trader
       }
    }
    
-   private double tradeValue(double repToFlip, double perimChange)
+   /**
+      Returns a double which indicates how valuable a trade is in the global context.
+      Higher value means a better trade.
+   */
+   private double tradeValue(double repToFlip, TradeProp trade)
    {
       double retVal = 0;
       
@@ -489,7 +480,7 @@ public class Trader
       else if (repToFlip >= .05)  {
          retVal = 50;
       }
-      retVal -= perimChange;
+      retVal -= trade.perimChange / trade.voteChange;
       return retVal;
    }
    

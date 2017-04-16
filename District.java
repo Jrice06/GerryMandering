@@ -14,11 +14,11 @@ import java.awt.Color;
 
 public class District
 {
-   private int[][] grid;
+   private double[][] grid;
    private ArrayList<Point> zone;
    private String rep = "Tie";
    
-   public District(int[][] grid, ArrayList<Point> zone)
+   public District(double[][] grid, ArrayList<Point> zone)
    {
       this.grid = grid;
       this.zone = zone;
@@ -57,9 +57,7 @@ public class District
       double blue = 0;
       
       for (int ndx = 0; ndx < zone.size(); ndx++)  {
-         if (grid[zone.get(ndx).x][zone.get(ndx).y] == 1) {
-            blue++;
-         }
+         blue += grid[zone.get(ndx).x][zone.get(ndx).y];
       }
       return blue / zone.size();
    }
@@ -76,10 +74,10 @@ public class District
       Returns the proportion of squares in this district that would be blue
       if the district traded a blue square for a red square.
    */
-   public double getBlueTradeRep()
+   public double getBlueTradeRep(double voteChange)
    {
       double temp = getBlueRep();
-      double val = temp * zone.size() - 1;
+      double val = temp * zone.size() - voteChange;
       return val / zone.size();
    }
    
@@ -87,10 +85,10 @@ public class District
       Returns the proportion of squares in this district that would be red
       if the district traded a red square for a blue square.
    */
-   public double getRedTradeRep()
+   public double getRedTradeRep(double voteChange)
    {
       double temp = getRedRep();
-      double val = temp * zone.size() - 1;
+      double val = temp * zone.size() + voteChange;
       
       return val / zone.size();
    }
@@ -100,13 +98,16 @@ public class District
       return zone.contains(spot);
    }
    
-   public int getNumLosingCells(int party)
+   /**
+      Returns the number of voters voting for the losing party in this district.
+   */
+   public double getNumLosingPop(int party)
    {
       if (party == 1 && getBlueRep() <= .5)  {
-         return (int) (zone.size() * getBlueRep());
+         return zone.size() * getBlueRep();
       }
       else if (party == 2 && getRedRep() <= .5) {
-         return (int) (zone.size() * getRedRep());
+         return zone.size() * getRedRep();
       }
       return 0;
    }
@@ -122,10 +123,10 @@ public class District
    
    public int isBlue()
    {
-      if (getBlueRep() > .5)  {
+      if (getBlueRep() > .55)  {
          return 1;
       }
-      if (getBlueRep() < .5)   {
+      if (getBlueRep() < .45)   {
          return 2;
       }
       return 0;
@@ -326,15 +327,15 @@ public class District
       Returns a double between 0 and 1 which represents the weight attached
       to this district when choosing a district to try to flip.
    */
-   public double flipWeight(int numBlueCell, int party)
+   public double flipWeight(double numBluePop, int party)
    {
       double ret = 0;
       
       if (party == 1)   {
-         ret = getBlueRep() * zone.size() / numBlueCell;
+         ret = getBlueRep() * zone.size() / numBluePop;
       }
       else if (party == 2) {
-         ret = getRedRep() * zone.size() / numBlueCell;
+         ret = getRedRep() * zone.size() / numBluePop;
       }
       return ret;
    }
@@ -343,12 +344,12 @@ public class District
       Returns a double between 0 and 1 which represents the weight attached
       to this district when choosing a district to trade with.
    */
-   public double tradeWeight(int numNonComp, int numComp, int party)
+   public double tradeWeight(int numNonComp, int numComp, int party, double voteChange)
    {
       double ret = 0, totalWeight = numNonComp + .5 * ((double) numComp);
       
-      if ((party == 1 && Math.abs(getBlueTradeRep() - .5) < .1)
-       || (party == 2 && Math.abs(getRedTradeRep() - .5) < .1))   {
+      if ((party == 1 && Math.abs(getBlueTradeRep(voteChange) - .5) < .1)
+       || (party == 2 && Math.abs(getRedTradeRep(voteChange) - .5) < .1))   {
          ret = .5 / totalWeight;
       }
       else  {
@@ -358,15 +359,15 @@ public class District
       
    }
    
-   public boolean isCompetitive(int party)
+   public boolean isCompetitive(int party, double voteChange)
    {
       boolean ret = false;
       
       if (party == 1)   {
-         ret = Math.abs(getBlueTradeRep() - .5) < .1;
+         ret = Math.abs(getBlueTradeRep(voteChange) - .5) < .1;
       }
       else  {
-         ret = Math.abs(getRedTradeRep() - .5) < .1;
+         ret = Math.abs(getRedTradeRep(voteChange) - .5) < .1;
       }
       return ret;
    }
@@ -374,7 +375,7 @@ public class District
    /**
       Interchange the x and y values for each cell in the zone arrayList.
    */
-   public void swapCoords(int[][] newGrid)
+   public void swapCoords(double[][] newGrid)
    {
       grid = newGrid;
       
