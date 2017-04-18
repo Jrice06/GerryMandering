@@ -12,7 +12,7 @@ import java.util.Random;
 
 public class Trader
 {
-   private static final int NUM_ITER = 500;
+   private static final int NUM_ITER = 500, ITER_MAX = 500;
    private static final double TRADE_THRESH = .00;
    private double[][] grid;
    private ArrayList<District> disList;
@@ -107,10 +107,10 @@ public class Trader
          disList = temp;
          
          setRatio();
-         randomSolve(targetRatio, (int) party);
+         boolean solved = randomSolve(targetRatio, (int) party);
          int perim = calcPerim(disList), highPerim = calcHighPerim(disList);
          
-         if (perim + highPerim < bestPerim + bestHighPerim) {
+         if (perim + highPerim < bestPerim + bestHighPerim && solved) {
             System.out.println();
             System.out.println("New Best! Attempt number: " + count + " | Total perim: " + perim
              + " | High Perim: " + highPerim);
@@ -185,16 +185,16 @@ public class Trader
          // Choose the district to make a trade in.
          if (party == 1)   {
             for (District dis : disList)  {
-               if (dis.getBlueRep() <= .5 && .5 - dis.getBlueRep() < close) {
-                  close = .5 - dis.getBlueRep();
+               if (dis.getBlueRep() <= .51 && Math.abs(.5 - dis.getBlueRep()) < close) {
+                  close = Math.abs(.5 - dis.getBlueRep());
                   bestDis = dis;
                }
             }
          }
          else  {
             for (District dis : disList)  {
-               if (dis.getRedRep() <= .5 && .5 - dis.getRedRep() < close) {
-                  close = .5 - dis.getRedRep();
+               if (dis.getRedRep() <= .51 && Math.abs(.5 - dis.getRedRep()) < close) {
+                  close = Math.abs(.5 - dis.getRedRep());
                   bestDis = dis;
                }
             }
@@ -207,25 +207,32 @@ public class Trader
    
    /**
       Makes a somewhat random sequence of trades to completely solve a grid.
+      Returns true if no districts were abandonded mid solve, false otherwise.
+      A district is abandonded if it exceeds the iteration maximum or it cannot make
+      a single trade.
    */
-   public void randomSolve(double targetRatio, int party)
-   {  
-      while (repRatio != targetRatio)  {
-         flipRandomDistrict(party);
+   public boolean randomSolve(double targetRatio, int party)
+   {
+      boolean noAbandon = true;
+      
+      while (repRatio != targetRatio && noAbandon)  {
+         noAbandon = flipRandomDistrict(party);
          setRatio();
-      }      
+      }   
+      return noAbandon;   
    }
    
    /**
       This method chooses a random district that the under-represented party is losing and flips it.
+      Returns true if the method was able to flip the district, false otherwise.
    */
-   public void flipRandomDistrict(int party)
+   public boolean flipRandomDistrict(int party)
    {
       double numBluePop = 0;
       ArrayList<District> partyLosing = new ArrayList<District> ();
       for (District dis : disList)  {
-         if ((party == 1 && dis.getBlueRep() <= .5) ||
-          (party == 2 && dis.getRedRep() <= .5)) {
+         if ((party == 1 && dis.getBlueRep() <= .51) ||
+          (party == 2 && dis.getRedRep() <= .51)) {
             partyLosing.add(dis);
             numBluePop += dis.getNumLosingPop(party);
          }
@@ -241,8 +248,7 @@ public class Trader
       }
       District toFlip = partyLosing.get(ndx);
       
-      //District toFlip = partyLosing.get(rand.nextInt(partyLosing.size()));
-      flipDistrict(party, toFlip);
+      return flipDistrict(party, toFlip);
    }
    
    /**
@@ -252,15 +258,17 @@ public class Trader
    public boolean flipDistrict(int party, District dis)
    {
       boolean madeTrade = true;
+      int numIter = 0;
       
-      while (((party == 1 && dis.getBlueRep() <= .5) ||
-       (party == 2 && dis.getRedRep() <= .5)) && madeTrade)   {
+      while (((party == 1 && dis.getBlueRep() <= .51) ||
+       (party == 2 && dis.getRedRep() <= .51)) && madeTrade && numIter < ITER_MAX)   {
          madeTrade = evaluateRandomTrade(dis, party);
-         while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false))  {
+         numIter++;
+         /*while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false))  {
             ;
-         }
+         }*/
       }
-      return madeTrade;
+      return madeTrade && numIter < ITER_MAX;
    }
    
    /**
@@ -336,7 +344,7 @@ public class Trader
       double randNum = rand.nextDouble();
       int ndx = -1;
          
-      while (randNum > 0)  {
+      while (randNum > 0 && ndx < validDistricts.size())  {
          ndx++;
          randNum -=
           validDistricts.get(ndx).tradeWeight(validDistricts.size() - numComp,
@@ -474,11 +482,11 @@ public class Trader
    {
       double retVal = 0;
       
-      if (repToFlip >= .1) {
-         retVal = 100;
+      if (repToFlip >= .05) {
+         retVal = 1000;
       }
-      else if (repToFlip >= .05)  {
-         retVal = 50;
+      else if (repToFlip >= .035)  {
+         retVal = 500;
       }
       retVal -= trade.perimChange / trade.voteChange;
       return retVal;

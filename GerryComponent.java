@@ -151,6 +151,9 @@ public class GerryComponent extends JComponent
 		}
 		divider.drawBounds(g2, rexSize);
 		System.out.println(divider);
+		for (District dis: disList)   {
+		   System.out.println(dis);
+		}   
 	   System.out.println("-----------------------------------------------------");
 	}
 }

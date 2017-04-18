@@ -123,10 +123,10 @@ public class District
    
    public int isBlue()
    {
-      if (getBlueRep() > .55)  {
+      if (getBlueRep() > .51)  {
          return 1;
       }
-      if (getBlueRep() < .45)   {
+      if (getBlueRep() < .49)   {
          return 2;
       }
       return 0;
@@ -180,11 +180,13 @@ public class District
 	
 	public String toString()
 	{
-	   String temp = "" + getRep() + " District:, size " + zone.size() + " ";
+	   String temp = "" + getRep() + " District: size " + zone.size() + " ";
 
-	   for (Point p1 : zone)   {
+	   /*for (Point p1 : zone)   {
 	      temp = temp + String.format("(%d, %d) ", (int) p1.getX(), (int) p1.getY());
-	   }
+	   }*/
+	   temp = temp + String.format("(%d, %d) ", (int) zone.get(0).getX(), (int) zone.get(0).getY());
+	   temp = temp + String.format("%.3f blue, %.3f red", getBlueRep(), getRedRep());
 	   return temp;
    }
    
