@@ -125,9 +125,9 @@ public class GerryComponent extends JComponent
 	*/
 	private void cleanUpGrid()
 	{
-	   for (int i = 0; i < disList.size(); i++)  {
-	      for (int j = 0; j < i; j++)   {  
-	   	      while (trade.cleanUpTrade(disList.get(i), disList.get(j), true))  {
+      for (District dis : disList)  {
+         for (District border : dis.getBorderDistricts(disList))   {
+            while (trade.cleanUpTrade(dis, border, true))  {
 	            ;
 	         }
 	      }

@@ -12,8 +12,7 @@ import java.util.Random;
 
 public class Trader
 {
-   private static final int NUM_ITER = 500, ITER_MAX = 500;
-   private static final double TRADE_THRESH = .00;
+   private static final int NUM_ITER = 100, ITER_MAX = 500;
    private double[][] grid;
    private ArrayList<District> disList;
    private int disPop, totalPerim, highPerim;
@@ -167,12 +166,6 @@ public class Trader
       int party;
       double targetRatio, close;
       
-      if (lastTrade != null)  {
-         boolean needClean = cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false);
-         if (needClean) {
-            return;
-         }
-      }
       ArrayList<Double> ret = getTargetRatio();
       party = (int) ((double) ret.get(0));
       targetRatio = ret.get(1);
@@ -203,6 +196,17 @@ public class Trader
          // Now that we know the district and the party to support, we can make a trade.
          evaluateTrades(bestDis, party);
        }
+       else    {
+         
+         // If the target ratio has been achieved, look for a cleanup trade instead.
+         for (District dis : disList)  {
+            for (District border : dis.getBorderDistricts(disList))   {
+               if (cleanUpTrade(dis, border, false))  {
+	               return;
+	            }
+	         }
+	      }
+	   }
    }
    
    /**
@@ -218,7 +222,17 @@ public class Trader
       while (repRatio != targetRatio && noAbandon)  {
          noAbandon = flipRandomDistrict(party);
          setRatio();
-      }   
+      }
+      
+      // Once the ratios are matched, perform any trades which reduce overall perimeter
+      // and don't change the ratios of representation.
+      for (District dis : disList)  {
+         for (District border : dis.getBorderDistricts(disList))   {
+            while (cleanUpTrade(dis, border, false))  {
+	            ;
+	         }
+	      }
+	   } 
       return noAbandon;   
    }
    
@@ -264,9 +278,6 @@ public class Trader
        (party == 2 && dis.getRedRep() <= .51)) && madeTrade && numIter < ITER_MAX)   {
          madeTrade = evaluateRandomTrade(dis, party);
          numIter++;
-         /*while (cleanUpTrade(lastTrade.ourDis, lastTrade.theirDis, false))  {
-            ;
-         }*/
       }
       return madeTrade && numIter < ITER_MAX;
    }
@@ -376,7 +387,7 @@ public class Trader
          for (Point ourCell : ourBorder)  {
             double diff = grid[(int) ourCell.getX()][(int) ourCell.getY()] - 
              grid[(int) theirCell.getX()][(int) theirCell.getY()];
-            if ((diff < -TRADE_THRESH && party == 1) || diff > TRADE_THRESH && party == 2)  {
+            if ((diff < 0 && party == 1) || diff > 0 && party == 2)  {
                TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
                int curPerim = calcPerim(disList), futPerim;
                double voteChange = trade.voteChange;
@@ -432,25 +443,25 @@ public class Trader
       int perimChange = 0;
       
       for (Point theirCell : theirBorder)  {
-         for (Point ourCell : ourBorder)  {
-            double diff = (grid[(int) ourCell.getX()][(int) ourCell.getY()] - 
-             grid[(int) theirCell.getX()][(int) theirCell.getY()]);
-            if (party || Math.abs(diff) < TRADE_THRESH) {
+         for (Point ourCell : ourBorder)  {                    
                
-               TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
-               int curPerim = calcPerim(disList), futPerim;
-                  
-               makeTrade(trade);
-               if (!ourDis.hasIsolation() && !theirDis.hasIsolation()) {
-                  futPerim = calcPerim(disList);
-                  trade.perimChange = futPerim - curPerim;
-                  if (futPerim - curPerim < perimChange) {
-                     perimChange = futPerim - curPerim;
-                     bestTrade = trade;
-                  }
+            TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
+            int curPerim = calcPerim(disList), futPerim;
+               
+            double oldRatio = repRatio;
+            makeTrade(trade);
+            setRatio();
+            
+            if (!ourDis.hasIsolation() && !theirDis.hasIsolation() && (repRatio == oldRatio || party)) {
+                futPerim = calcPerim(disList);
+                trade.perimChange = futPerim - curPerim;
+                if (futPerim - curPerim < perimChange) {
+                  perimChange = futPerim - curPerim;
+                  bestTrade = trade;
                }
-               makeTrade(trade);
             }
+            makeTrade(trade);
+            setRatio();
          }
       }
       if (bestTrade != null)  {
