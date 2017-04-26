@@ -19,7 +19,8 @@ import java.lang.Math;
 public class GerryComponent extends JComponent
 {
    private static final int FRAME_WIDTH = 800, FRAME_HEIGHT = 800;
-   private double[][] grid;
+   private double[][] grid, popGrid;
+   private double totalPop = 0;
    private Random rand = new Random ();
    private int rexSize;
    private Divider divider;
@@ -30,6 +31,7 @@ public class GerryComponent extends JComponent
 	 throws FileNotFoundException
 	{
 	   grid = new double[width][height];
+	   popGrid = new double[width][height];
 	   rexSize = (int) (FRAME_HEIGHT / (Math.max(width, height) + 2));
 	   
 	   if (datafile.equals(""))  {
@@ -39,6 +41,7 @@ public class GerryComponent extends JComponent
 		      }
 		   }
 		}
+		
 		else  {
 	      File file = new File(datafile);
 	      Scanner in = new Scanner(file);
@@ -48,16 +51,23 @@ public class GerryComponent extends JComponent
 	            grid[ndxB][ndxA] = val;
 	         }
 	      }
+	      	for (int ndxA = 0; ndxA < height; ndxA++)  {
+	         for (int ndxB = 0; ndxB < width; ndxB++) {
+	            double val = in.nextDouble();
+	            popGrid[ndxB][ndxA] = val;
+	            totalPop += val;
+	         }
+	      }
 	      if (in.hasNextDouble()) {
 	         System.out.println("Error in File Format");
 	      }
 	   }
-	    
-	   divider = new Divider(grid, numDis, getNumCells());
+	   
+	   divider = new Divider(grid, popGrid, numDis, totalPop);
 	   this.disList = divider.getDisList();
-	   trade = new Trader(grid, disList, getNumCells() / numDis,
+	   trade = new Trader(grid, popGrid, disList, totalPop / numDis,
 	    divider.getPopRatio());
-	   cleanUpGrid();
+	   //cleanUpGrid();
 	}
 	
 	public void makeTrade()
@@ -80,9 +90,9 @@ public class GerryComponent extends JComponent
 	
 	public void reset()
 	{
-		divider = new Divider(grid, disList.size(), getNumCells());
+		divider = new Divider(grid, popGrid, disList.size(), totalPop);
 	   this.disList = divider.getDisList();
-	   	trade = new Trader(grid, disList, getNumCells() / disList.size(),
+	   	trade = new Trader(grid, popGrid, disList, totalPop / disList.size(),
 	    divider.getPopRatio());
 	   	cleanUpGrid();
 	}
@@ -98,25 +108,6 @@ public class GerryComponent extends JComponent
 	   
 	   // Uncomment to make the choice 50-50
 	   return rand.nextDouble();
-	}
-	
-	/**
-	   This method returns the number of cells in this grid which 
-	   belong to a particular party.
-	*/
-	private int getNumCells()
-	{
-	   int ret = 0;
-	   
-	   for (int i = 0; i < grid.length; i++)  {
-	      for (int j = 0; j < grid[0].length; j++)  {
-	         /*if (grid[i][j] != 0) {
-	            ret++;
-	         }*/
-	         ret++;
-	      }
-	   }
-	   return ret;
 	}
 	
 	/**
@@ -139,9 +130,13 @@ public class GerryComponent extends JComponent
 		Graphics2D g2 = (Graphics2D) g;
 		
 		for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
-		   for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {	      
-            g2.setColor(new Color((float) (1 - grid[ndxA][ndxB]), (float) 0.0,
-             (float) grid[ndxA][ndxB]));
+		   for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {
+		      //float alpha = (float) Math.min(1.0, popGrid[ndxA][ndxB] * numSquares() / totalPop);
+		      float alpha = (float) 1.0;
+		      float red = (float) (1 - grid[ndxA][ndxB]);
+		      float green = (float) (grid[ndxA][ndxB]); 
+		      	      
+            g2.setColor(new Color(red, (float) 0.0, green, alpha));
 		      g2.fill(new Rectangle(rexSize * (ndxA + 1), rexSize * (ndxB + 1),
 		       rexSize, rexSize));
 		      	g2.setColor(Color.black);
@@ -155,5 +150,19 @@ public class GerryComponent extends JComponent
 		   System.out.println(dis);
 		}   
 	   System.out.println("-----------------------------------------------------");
+	}
+	
+	private int numSquares()
+	{
+	   int ret = 0;
+	   
+	   for (int i = 0; i < popGrid.length; i++)  {
+	      for (int j = 0; j < popGrid[0].length; j++)  {
+	         if (popGrid[i][j] > 0.001) {
+	            ret++;
+	         }
+	      }
+	   }
+	   return ret;
 	}
 }

@@ -10,18 +10,22 @@ import java.lang.Math;
 
 public class Divider
 {
-   private double[][] grid;
+   private double[][] grid, popGrid;
    private ArrayList<District> disList;
-   private int numDis, pop, disPop, totalPerim = 0, highPerim = 0;
-   private double repRatio, blu, red;
+   private int numDis, totalPerim = 0, highPerim = 0;
+   private double repRatio, blu, red, pop, disPop, prevPop = 0;
    
-   public Divider(double[][] grid, int numDis, int numSquare)
+   public Divider(double[][] grid, double[][] popGrid, int numDis, double totalPop)
    {
       this.grid = grid;
+      this.popGrid = popGrid;
       this.numDis = numDis;
-      this.pop = numSquare;
+      this.pop = totalPop;
       this.disPop = pop / numDis;
-      disList = new ArrayList<District> (); 
+      disList = new ArrayList<District> ();
+      
+      System.out.println("Total Pop is: " + pop);
+      System.out.println("Dis pop is: " + disPop);
       
       takeBestSnake();
       //snakeInit();
@@ -30,7 +34,7 @@ public class Divider
       double blue = 0;
       for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
 		   for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {	      
-		      blue += grid[ndxA][ndxB];
+		      blue += grid[ndxA][ndxB] * popGrid[ndxA][ndxB];
 		   }
       }
       
@@ -48,6 +52,7 @@ public class Divider
       perimV = calcPerim() + calcHighPerim();
       boolean isolatedV = gridHasIsolation();
       disList = new ArrayList<District> (); 
+      prevPop = 0;
       
       reflectGrid();
       snakeInit();
@@ -57,7 +62,8 @@ public class Divider
       System.out.print("Vertical Snake: " + perimV);
       System.out.println("   Horizontal Snake: " + perimH);
       if ((perimV < perimH && !isolatedV) || gridHasIsolation()) {
-         disList = new ArrayList<District> (); 
+         disList = new ArrayList<District> ();
+         prevPop = 0; 
          snakeInit();
          System.out.println("Using vertical snake");
       }
@@ -114,11 +120,11 @@ public class Divider
    
    private void evenEvenSnake(int[] widths)
    {   
-      int disCount = 0, j = 0, i = 0, startX = 0;
+      int j = 0, i = 0, startX = 0;
       ArrayList<Point> zone = new ArrayList<Point> ();
       String lastMove = "right";
      
-      for (int ndx = 0; disList.size() < numDis; ndx++)   {
+      for (int ndx = 0; disList.size() < numDis && j < grid.length; ndx++)   {
          startX = j;
          if (ndx % 2 == 0) {
             while (i < grid[0].length - 2)  {
@@ -138,9 +144,11 @@ public class Divider
                   j++;
                }
                
-               if (zone.size() == disPop)  {
-                  disList.add(new District(grid, zone));
+               if (fullDistrict(zone))  {
+                  Point temp = zone.remove(zone.size() - 1);
+                  disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
+                  zone.add(temp); 
                }
             }
             
@@ -161,9 +169,11 @@ public class Divider
                   i--;
                   lastMove = "up";
                }
-               if (zone.size() == disPop)  {
-                  disList.add(new District(grid, zone));
+               if (fullDistrict(zone))  {
+                  Point temp = zone.remove(zone.size() - 1);
+                  disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
+                  zone.add(temp); 
                }
             }  
          }
@@ -186,9 +196,11 @@ public class Divider
                   i--;
                   lastMove = "up";
                }
-               if (zone.size() == disPop)  {
-                  disList.add(new District(grid, zone));
+               if (fullDistrict(zone))  {
+                  Point temp = zone.remove(zone.size() - 1);
+                  disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
+                  zone.add(temp); 
                }
             }  
             i--;
@@ -210,24 +222,26 @@ public class Divider
                   i--;
                   j++;
                }
-               if (zone.size() == disPop)  {
-                  disList.add(new District(grid, zone));
+               if (fullDistrict(zone))  {
+                  Point temp = zone.remove(zone.size() - 1);
+                  disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
+                  zone.add(temp); 
                }
             }
             i++;
             j++;
          }
-      }      
-   
+      }
+      addLastDistrict(zone);      
    }
    
    private void evenOddSnake(int[] widths)
    {
-      int disCount = 0, j = 0, i = 0, startX;
+      int j = 0, i = 0, startX;
       ArrayList<Point> zone = new ArrayList<Point> ();
-     
-      for (int ndx = 0; disList.size() < numDis; ndx++)   {
+           
+      for (int ndx = 0; disList.size() < numDis && j < grid.length; ndx++)   {
          startX = j;
          while ((i < grid[0].length - 2 && ndx % 2 == 0) || (i > 1 && ndx % 2 == 1))  {
             addCell(zone, new Point(j, i));
@@ -255,9 +269,11 @@ public class Divider
                }
                j++;
             }
-            if (zone.size() == disPop)  {
-               disList.add(new District(grid, zone));
+            if (fullDistrict(zone))  {
+               Point temp = zone.remove(zone.size() - 1);
+               disList.add(new District(grid, popGrid, zone));
                zone = new ArrayList<Point> ();
+               zone.add(temp); 
             }
          }
          
@@ -279,29 +295,27 @@ public class Divider
                lastMove = "up";
             }
             
-            if (zone.size() == disPop)  {
-               disList.add(new District(grid, zone));
+            if (fullDistrict(zone))  {
+               Point temp = zone.remove(zone.size() - 1);
+               disList.add(new District(grid, popGrid, zone));
                zone = new ArrayList<Point> ();
+               zone.add(temp); 
             }
          }
-      }          
+      } 
+      addLastDistrict(zone);           
    }
    
    private void oddSnake(int[] widths)
    {  
-      int disCount = 0, j = 0, i = 0;
+      int j = 0, i = 0;
       ArrayList<Point> zone = new ArrayList<Point> ();
      
-      for (int ndx = 0; disList.size() < numDis; ndx++)   {
+      for (int ndx = 0; disList.size() < numDis && j < grid.length; ndx++)   {
          int startX = j;
          
          while ((i < grid[0].length && ndx % 2 == 0) || (i >= 0 && ndx % 2 == 1))  {
-            if (disCount == 0)   {
-               zone = new ArrayList<Point> ();
-            }
-            addCell(zone, new Point(j, i));
-            disCount++;
-                
+            addCell(zone, new Point(j, i));   
             if (i % 2 == 0)   {
                j++;
             }
@@ -326,9 +340,11 @@ public class Divider
                }
                j++;
             }
-            if (disCount == disPop)  {
-               disList.add(new District(grid, zone));
-               disCount = 0;
+            if (fullDistrict(zone))  {
+               Point temp = zone.remove(zone.size() - 1);
+               disList.add(new District(grid, popGrid, zone));
+               zone = new ArrayList<Point> ();
+               zone.add(temp); 
             }
          }
          if (ndx % 2 == 0) {
@@ -338,15 +354,15 @@ public class Divider
             i++;
          }
          j++;
-      }          
+      }
+      addLastDistrict(zone);          
    }
    
    private void addCell(ArrayList<Point> zone, Point p1)
    {
-      /*if (grid[(int) p1.getX()][(int) p1.getY()] != 0)   {
+      if (popGrid[(int) p1.getX()][(int) p1.getY()] > 0.001)   {
          zone.add(p1);
-      }*/
-      zone.add(p1);
+      }
    }
       
    /*
@@ -418,13 +434,16 @@ public class Divider
    private void reflectGrid()
    {
       double[][] newGrid = new double[grid[0].length][grid.length];
+      double[][] newPopGrid = new double[popGrid[0].length][popGrid.length];
       
       for (int i = 0; i < grid[0].length; i++)  {
          for (int j = 0; j < grid.length; j++)  {
             newGrid[i][j] = grid[j][i];
+            newPopGrid[i][j] = popGrid[j][i];
          }
       }
       grid = newGrid;
+      popGrid = newPopGrid;
       
       // Swap the district zones
       for (District dis: disList)   {
@@ -465,5 +484,48 @@ public class Divider
          }
       }
       return ret;
+   }
+   
+   /**
+      Returns true if the zone has enough population to qualify as a district.
+      Returns false otherwise.
+   */
+   private boolean fullDistrict(ArrayList<Point> zone)
+   {
+      double thisDisPop = 0;
+      boolean ret = false;
+      
+      for (Point p1 : zone)   {
+         thisDisPop += popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      //System.out.println("disPop is: " + thisDisPop + ". Last disPop was: " + prevPop + ". Target disPop is: " + disPop);
+      
+      if (Math.abs(thisDisPop - disPop) < Math.abs(prevPop - disPop) || prevPop == 0)   {
+         prevPop = thisDisPop;
+      }
+      else  {
+         //System.out.println("District is full!");
+         ret = true;
+         prevPop = 0;
+      }
+      return ret;
+   }
+   
+   /**
+      This method handles adding the very last district in the snaking algorithm.
+      If the last district has already been added, adds any leftover cells that have
+      not been added to a disrict to the last added district.
+   */
+   private void addLastDistrict(ArrayList<Point> zone)
+   {
+      if (disList.size() == numDis - 1) {
+         disList.add(new District(grid, popGrid, zone));
+      }
+      
+      else if (disList.size() == numDis && zone.size() > 0) {
+         for (Point p1 : zone)   {
+            disList.get(disList.size() - 1).addSquare(p1);
+         }
+      }
    }
 }  

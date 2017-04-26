@@ -14,29 +14,52 @@ import java.awt.Color;
 
 public class District
 {
-   private double[][] grid;
+   private double[][] grid, popGrid;
+   private double disPop = 0, blueRep = 0;
    private ArrayList<Point> zone;
    private String rep = "Tie";
    
-   public District(double[][] grid, ArrayList<Point> zone)
+   public District(double[][] grid, double[][] popGrid, ArrayList<Point> zone)
    {
       this.grid = grid;
+      this.popGrid = grid;
       this.zone = zone;
+      
+      for (Point p1 : zone)   {
+         disPop += popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      for (int ndx = 0; ndx < zone.size(); ndx++)  {
+         blueRep += popGrid[zone.get(ndx).x][zone.get(ndx).y] *
+          grid[zone.get(ndx).x][zone.get(ndx).y];
+      }
+      blueRep /= disPop;
    }
    
    public void addSquare(Point spot)
    {
       zone.add(spot);
+      
+      blueRep *= disPop;
+      disPop += popGrid[(int) spot.getX()][(int) spot.getY()];
+      blueRep += popGrid[(int) spot.getX()][(int) spot.getY()] *
+       grid[(int) spot.getX()][(int) spot.getY()];
+      blueRep /= disPop;
    }
    
    public void removeSquare(Point spot)
    {
       zone.remove(spot);
+      
+      blueRep *= disPop;
+      disPop -= popGrid[(int) spot.getX()][(int) spot.getY()];
+      blueRep -= popGrid[(int) spot.getX()][(int) spot.getY()] *
+       grid[(int) spot.getX()][(int) spot.getY()];
+      blueRep /= disPop;
    }
    
-   public int getSize()
+   public double getPop()
    {
-      return zone.size();
+      return disPop;
    }
    
    public ArrayList<Point> getZone()
@@ -54,12 +77,7 @@ public class District
    */
    public double getBlueRep()
    {
-      double blue = 0;
-      
-      for (int ndx = 0; ndx < zone.size(); ndx++)  {
-         blue += grid[zone.get(ndx).x][zone.get(ndx).y];
-      }
-      return blue / zone.size();
+      return blueRep;
    }
    
    /**
@@ -67,7 +85,7 @@ public class District
    */
    public double getRedRep()
    {
-      return 1 - getBlueRep();
+      return 1 - blueRep;
    }
    
    /**
@@ -76,9 +94,9 @@ public class District
    */
    public double getBlueTradeRep(double voteChange)
    {
-      double temp = getBlueRep();
-      double val = temp * zone.size() - voteChange;
-      return val / zone.size();
+      double val = blueRep * disPop - voteChange;
+      
+      return val / disPop;
    }
    
    /**
@@ -87,10 +105,9 @@ public class District
    */
    public double getRedTradeRep(double voteChange)
    {
-      double temp = getRedRep();
-      double val = temp * zone.size() + voteChange;
+      double val = getRedRep() * disPop + voteChange;
       
-      return val / zone.size();
+      return val / disPop;
    }
    
    public boolean inDistrict(Point spot)
@@ -104,10 +121,10 @@ public class District
    public double getNumLosingPop(int party)
    {
       if (party == 1 && getBlueRep() <= .5)  {
-         return zone.size() * getBlueRep();
+         return disPop * getBlueRep();
       }
       else if (party == 2 && getRedRep() <= .5) {
-         return zone.size() * getRedRep();
+         return disPop * getRedRep();
       }
       return 0;
    }
@@ -115,6 +132,7 @@ public class District
    public int drawDis(Graphics2D g2, int rexSize)
    {
       int totalPerim = 0;
+      
       for (Point p1 : zone)   {
          totalPerim += drawSquare(g2, rexSize, p1, (int) p1.getX(), (int) p1.getY());
       }
@@ -180,11 +198,11 @@ public class District
 	
 	public String toString()
 	{
-	   String temp = "" + getRep() + " District: size " + zone.size() + " ";
+	   if (zone.size() == 0)   {
+	      return "Empty District";
+	   }
+	   String temp = "" + getRep() + " District: size " + disPop + " ";
 
-	   /*for (Point p1 : zone)   {
-	      temp = temp + String.format("(%d, %d) ", (int) p1.getX(), (int) p1.getY());
-	   }*/
 	   temp = temp + String.format("(%d, %d) ", (int) zone.get(0).getX(), (int) zone.get(0).getY());
 	   temp = temp + String.format("%.3f blue, %.3f red", getBlueRep(), getRedRep());
 	   return temp;
@@ -211,17 +229,6 @@ public class District
          }
       }
       return totalPerim;
-   }
-   
-   public void tradeCell(Point ourGuy, Point theirGuy, District them)
-   {
-      if (!zone.contains(ourGuy) || !them.zone.contains(theirGuy))   {
-         return;
-      }
-      
-      this.zone.add(theirGuy);
-      this.zone.remove(ourGuy);
-      them.zone.add(ourGuy);
    }
    
    // Returns a list of points from their distrct that border this distect and their district
@@ -298,7 +305,9 @@ public class District
    public boolean hasIsolation()
    {
       Set<Point> island = new HashSet<Point> ();
-      checkNear(zone.get(0), island);
+      if (zone.size() > 0) {
+         checkNear(zone.get(0), island);
+      }
       return island.size() != zone.size();
    }
    

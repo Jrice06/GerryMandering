@@ -13,16 +13,18 @@ import java.util.Random;
 public class Trader
 {
    private static final int NUM_ITER = 100, ITER_MAX = 500;
-   private double[][] grid;
+   private double[][] grid, popGrid;
    private ArrayList<District> disList;
-   private int disPop, totalPerim, highPerim;
-   private double repRatio, popRatio;
+   private int totalPerim, highPerim;
+   private double repRatio, popRatio, disPop;
    private TradeProp lastTrade = null;
    private Random rand = new Random ();
    
-   public Trader(double[][] grid, ArrayList<District> disList, int disPop, double popRatio)
+   public Trader(double[][] grid, double[][] popGrid, ArrayList<District> disList,
+    double disPop, double popRatio)
    {
       this.grid = grid;
+      this.popGrid = grid;
       this.disList = disList;
       this.disPop = disPop;
       this.popRatio = popRatio;
@@ -537,7 +539,7 @@ public class Trader
          for (Point p1 : dis.getZone())   {
             newZone.add(p1);
          }
-         District newDis = new District(grid, newZone);
+         District newDis = new District(grid, popGrid, newZone);
          copyList.add(newDis);
       }
    }
