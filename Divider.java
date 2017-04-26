@@ -25,7 +25,7 @@ public class Divider
       disList = new ArrayList<District> ();
       
       System.out.println("Total Pop is: " + pop);
-      System.out.println("Dis pop is: " + disPop);
+      System.out.printf("Dis pop is: %.3f\n", disPop);
       
       takeBestSnake();
       //snakeInit();
@@ -74,7 +74,8 @@ public class Divider
    
    private void snakeInit()
    {
-      int width = (int) Math.round(Math.sqrt(disPop));
+      double cellPop = grid.length * grid[0].length / numDis;
+      int width = (int) Math.round(Math.sqrt(cellPop));
       int remain = grid.length % width, numRex = grid.length / width;
       int[] widths = new int[numRex + 1];
       
@@ -500,11 +501,10 @@ public class Divider
       }
       //System.out.println("disPop is: " + thisDisPop + ". Last disPop was: " + prevPop + ". Target disPop is: " + disPop);
       
-      if (Math.abs(thisDisPop - disPop) < Math.abs(prevPop - disPop) || prevPop == 0)   {
+      if (Math.abs(thisDisPop - disPop) <= Math.abs(prevPop - disPop) || prevPop == 0)   {
          prevPop = thisDisPop;
       }
       else  {
-         //System.out.println("District is full!");
          ret = true;
          prevPop = 0;
       }

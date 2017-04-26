@@ -137,6 +137,9 @@ public class GerryComponent extends JComponent
 		      float green = (float) (grid[ndxA][ndxB]); 
 		      	      
             g2.setColor(new Color(red, (float) 0.0, green, alpha));
+            if (popGrid[ndxA][ndxB] < .001)  {
+               g2.setColor(new Color((float) 1.0, (float) 1.0, (float) 1.0));
+            }
 		      g2.fill(new Rectangle(rexSize * (ndxA + 1), rexSize * (ndxB + 1),
 		       rexSize, rexSize));
 		      	g2.setColor(Color.black);

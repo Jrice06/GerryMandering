@@ -201,7 +201,7 @@ public class District
 	   if (zone.size() == 0)   {
 	      return "Empty District";
 	   }
-	   String temp = "" + getRep() + " District: size " + disPop + " ";
+	   String temp = "" + getRep() + String.format("District: size %.3f ", disPop);
 
 	   temp = temp + String.format("(%d, %d) ", (int) zone.get(0).getX(), (int) zone.get(0).getY());
 	   temp = temp + String.format("%.3f blue, %.3f red", getBlueRep(), getRedRep());
