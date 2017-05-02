@@ -45,14 +45,14 @@ public class GerryComponent extends JComponent
 		else  {
 	      File file = new File(datafile);
 	      Scanner in = new Scanner(file);
-	      for (int ndxA = 0; ndxA < height; ndxA++)  {
-	         for (int ndxB = 0; ndxB < width; ndxB++) {
+	      for (int ndxA = 0; ndxA < grid[0].length; ndxA++)  {
+	         for (int ndxB = 0; ndxB < grid.length; ndxB++) {
 	            double val = in.nextDouble();
 	            grid[ndxB][ndxA] = val;
 	         }
 	      }
-	      	for (int ndxA = 0; ndxA < height; ndxA++)  {
-	         for (int ndxB = 0; ndxB < width; ndxB++) {
+	      	for (int ndxA = 0; ndxA < grid[0].length; ndxA++)  {
+	         for (int ndxB = 0; ndxB < grid.length; ndxB++) {
 	            double val = in.nextDouble();
 	            popGrid[ndxB][ndxA] = val;
 	            totalPop += val;
@@ -67,7 +67,7 @@ public class GerryComponent extends JComponent
 	   this.disList = divider.getDisList();
 	   trade = new Trader(grid, popGrid, disList, totalPop / numDis,
 	    divider.getPopRatio());
-	   //cleanUpGrid();
+	   cleanUpGrid();
 	}
 	
 	public void makeTrade()
@@ -130,7 +130,7 @@ public class GerryComponent extends JComponent
 		Graphics2D g2 = (Graphics2D) g;
 		
 		for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
-		   for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {
+		   for (int ndxB = 0; ndxB < grid[0].length; ndxB++)   {
 		      //float alpha = (float) Math.min(1.0, popGrid[ndxA][ndxB] * numSquares() / totalPop);
 		      float alpha = (float) 1.0;
 		      float red = (float) (1 - grid[ndxA][ndxB]);

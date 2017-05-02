@@ -22,7 +22,7 @@ public class District
    public District(double[][] grid, double[][] popGrid, ArrayList<Point> zone)
    {
       this.grid = grid;
-      this.popGrid = grid;
+      this.popGrid = popGrid;
       this.zone = zone;
       
       for (Point p1 : zone)   {
@@ -38,22 +38,24 @@ public class District
    public void addSquare(Point spot)
    {
       zone.add(spot);
-      
+
       blueRep *= disPop;
       disPop += popGrid[(int) spot.getX()][(int) spot.getY()];
       blueRep += popGrid[(int) spot.getX()][(int) spot.getY()] *
        grid[(int) spot.getX()][(int) spot.getY()];
+       
       blueRep /= disPop;
    }
    
    public void removeSquare(Point spot)
    {
       zone.remove(spot);
-      
+  
       blueRep *= disPop;
       disPop -= popGrid[(int) spot.getX()][(int) spot.getY()];
       blueRep -= popGrid[(int) spot.getX()][(int) spot.getY()] *
        grid[(int) spot.getX()][(int) spot.getY()];
+       
       blueRep /= disPop;
    }
    
@@ -201,7 +203,7 @@ public class District
 	   if (zone.size() == 0)   {
 	      return "Empty District";
 	   }
-	   String temp = "" + getRep() + String.format("District: size %.3f ", disPop);
+	   String temp = "" + getRep() + String.format(" District: size %.3f ", disPop);
 
 	   temp = temp + String.format("(%d, %d) ", (int) zone.get(0).getX(), (int) zone.get(0).getY());
 	   temp = temp + String.format("%.3f blue, %.3f red", getBlueRep(), getRedRep());
@@ -343,10 +345,10 @@ public class District
       double ret = 0;
       
       if (party == 1)   {
-         ret = getBlueRep() * zone.size() / numBluePop;
+         ret = getBlueRep() * disPop / numBluePop;
       }
       else if (party == 2) {
-         ret = getRedRep() * zone.size() / numBluePop;
+         ret = getRedRep() * disPop / numBluePop;
       }
       return ret;
    }
@@ -386,9 +388,10 @@ public class District
    /**
       Interchange the x and y values for each cell in the zone arrayList.
    */
-   public void swapCoords(double[][] newGrid)
+   public void swapCoords(double[][] newGrid, double[][] newPopGrid)
    {
       grid = newGrid;
+      popGrid = newPopGrid;
       
       ArrayList<Point> temp = new ArrayList<Point> ();
       

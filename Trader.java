@@ -13,6 +13,7 @@ import java.util.Random;
 public class Trader
 {
    private static final int NUM_ITER = 100, ITER_MAX = 500;
+   private static final double POP_THRESH = .05;
    private double[][] grid, popGrid;
    private ArrayList<District> disList;
    private int totalPerim, highPerim;
@@ -24,7 +25,7 @@ public class Trader
     double disPop, double popRatio)
    {
       this.grid = grid;
-      this.popGrid = grid;
+      this.popGrid = popGrid;
       this.disList = disList;
       this.disPop = disPop;
       this.popRatio = popRatio;
@@ -39,25 +40,41 @@ public class Trader
    private class TradeProp
    {
       int perimChange;
-      double voteChange;
-      Point ourCell, theirCell;
+      double voteChange = 0;
+      ArrayList<Point> ourCells, theirCells;
       District ourDis, theirDis;
       
-      public TradeProp(Point ourCell, Point theirCell, District ourDis, District theirDis)
+      public TradeProp(ArrayList<Point> ourCells, ArrayList<Point> theirCells,
+       District ourDis, District theirDis)
       {
-         this.ourCell = ourCell;
-         this.theirCell = theirCell;
+         this.ourCells = ourCells;
+         this.theirCells = theirCells;
          this.ourDis = ourDis;
          this.theirDis = theirDis;
          
-         this.voteChange = grid[(int) ourCell.getX()][(int) ourCell.getY()] -
-          grid[(int) theirCell.getX()][(int) theirCell.getY()];
+         for (Point our : ourCells) {
+            this.voteChange += grid[(int) our.getX()][(int) our.getY()] *
+             popGrid[(int) our.getX()][(int) our.getY()];
+         }
+         for (Point their : theirCells)   {
+            this.voteChange -= grid[(int) their.getX()][(int) their.getY()] *
+             popGrid[(int) their.getX()][(int) their.getY()];
+         }
       }
       
       public String toString()
       {
-         return ourCell.toString() + " for " + theirCell.toString() +
-          " Perim Change: " + perimChange + " Vote Change: " + String.format("%.3f", voteChange);
+         String temp = "";
+         
+         for (Point cell : ourCells)   {
+            temp = temp + cell.toString() + ", ";
+         }
+         temp = temp + "for ";
+         for (Point cell : theirCells) {
+            temp = temp + cell.toString() + ", ";
+         }
+         return temp + "Perim Change: " + perimChange + " Vote Change: " +
+          String.format("%.3f", voteChange);
       }
    }
    
@@ -380,34 +397,29 @@ public class Trader
    private TradeProp pickBestTrade(District ourDis, District theirDis, int party)
    {
       TradeProp bestTrade = null;
-      ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
-      ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
          
-      double tradeValue = 100;
+      double tradeValue = Double.MAX_VALUE;
+      int curPerim = calcPerim(disList), futPerim;
+      
+      ArrayList<TradeProp> tradeList = getValidTrades(ourDis, theirDis);
+      
+      for (TradeProp trade : tradeList)   {
+         double voteChange = trade.voteChange;
          
-      for (Point theirCell : theirBorder)  {
-         for (Point ourCell : ourBorder)  {
-            double diff = grid[(int) ourCell.getX()][(int) ourCell.getY()] - 
-             grid[(int) theirCell.getX()][(int) theirCell.getY()];
-            if ((diff < 0 && party == 1) || diff > 0 && party == 2)  {
-               TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
-               int curPerim = calcPerim(disList), futPerim;
-               double voteChange = trade.voteChange;
-               
-               if (party == 1)   {
-                  voteChange *= -1;
-               } 
-               makeTrade(trade);
-               if (!ourDis.hasIsolation() && !theirDis.hasIsolation()) {
-                  futPerim = calcPerim(disList);
-                  trade.perimChange = futPerim - curPerim;
-                  if (trade.perimChange / voteChange < tradeValue) {
-                     tradeValue = trade.perimChange / voteChange;
-                     bestTrade = trade;
-                  }
+         if (party == 1)   {
+            voteChange *= -1;
+         }
+         if (voteChange > 0)  {
+            makeTrade(trade);
+            if (!ourDis.hasIsolation() && !theirDis.hasIsolation())  {
+               futPerim = calcPerim(disList);
+               trade.perimChange = futPerim - curPerim;
+               if (trade.perimChange / voteChange < tradeValue)   {
+                  tradeValue = trade.perimChange / voteChange;
+                  bestTrade = trade;
                }
-               makeTrade(trade);
             }
+            makeTrade(trade);
          }
       }
       return bestTrade;
@@ -418,17 +430,25 @@ public class Trader
    */
    public void makeTrade(TradeProp trade)
    {
-      if (trade.ourDis.contains(trade.ourCell))   { 
-         trade.ourDis.removeSquare(trade.ourCell);
-         trade.theirDis.removeSquare(trade.theirCell);
-         trade.ourDis.addSquare(trade.theirCell);
-         trade.theirDis.addSquare(trade.ourCell);
+      if (trade.ourDis.contains(trade.ourCells.get(0)))   { 
+         for (Point ourCell : trade.ourCells)   {
+            trade.ourDis.removeSquare(ourCell);
+            trade.theirDis.addSquare(ourCell);
+         }
+         for (Point theirCell : trade.theirCells)  {
+            trade.theirDis.removeSquare(theirCell);
+            trade.ourDis.addSquare(theirCell);
+         }
       }
-      else if (trade.ourDis.contains(trade.theirCell))  {
-         trade.ourDis.removeSquare(trade.theirCell);
-         trade.theirDis.removeSquare(trade.ourCell);
-         trade.ourDis.addSquare(trade.ourCell);
-         trade.theirDis.addSquare(trade.theirCell);
+      else if (trade.ourDis.contains(trade.theirCells.get(0)))  {         
+         for (Point ourCell : trade.ourCells)   {
+            trade.theirDis.removeSquare(ourCell);
+            trade.ourDis.addSquare(ourCell);
+         }
+         for (Point theirCell : trade.theirCells)  {
+            trade.ourDis.removeSquare(theirCell);
+            trade.theirDis.addSquare(theirCell);
+         }
       }
    }
    
@@ -442,29 +462,25 @@ public class Trader
       TradeProp bestTrade = null;
       ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
       ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
-      int perimChange = 0;
+      int perimChange = 0, curPerim = calcPerim(disList), futPerim;
       
-      for (Point theirCell : theirBorder)  {
-         for (Point ourCell : ourBorder)  {                    
-               
-            TradeProp trade = new TradeProp(ourCell, theirCell, ourDis, theirDis);
-            int curPerim = calcPerim(disList), futPerim;
-               
-            double oldRatio = repRatio;
-            makeTrade(trade);
-            setRatio();
-            
-            if (!ourDis.hasIsolation() && !theirDis.hasIsolation() && (repRatio == oldRatio || party)) {
-                futPerim = calcPerim(disList);
-                trade.perimChange = futPerim - curPerim;
-                if (futPerim - curPerim < perimChange) {
-                  perimChange = futPerim - curPerim;
-                  bestTrade = trade;
-               }
+      ArrayList<TradeProp> tradeList = getValidTrades(ourDis, theirDis);
+      for (TradeProp trade : tradeList)   {
+         double oldRatio = repRatio;
+         makeTrade(trade);
+         setRatio();
+         
+         if (!ourDis.hasIsolation() && !theirDis.hasIsolation() &&
+          (repRatio == oldRatio || party)) {
+            futPerim = calcPerim(disList);
+            trade.perimChange = futPerim - curPerim;
+            if (trade.perimChange < perimChange) {
+               perimChange = futPerim - curPerim;
+               bestTrade = trade;
             }
-            makeTrade(trade);
-            setRatio();
          }
+         makeTrade(trade);
+         setRatio();
       }
       if (bestTrade != null)  {
          makeTrade(bestTrade);
@@ -542,5 +558,86 @@ public class Trader
          District newDis = new District(grid, popGrid, newZone);
          copyList.add(newDis);
       }
+   }
+   
+   /**
+      Returns a list of 1 for 1 OR 2 for 1 OR 1 for 2 trades between two
+      districts all of which do not violate the equal population requirements
+      for both districts.
+   */
+   public ArrayList<TradeProp> getValidTrades(District ourDis, District theirDis)
+   {
+      ArrayList<TradeProp> tradeList = new ArrayList<TradeProp> ();
+      ArrayList<Point> theirBorder = ourDis.getBorderCells(theirDis);
+      ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
+      
+      for (Point theirCell : theirBorder) {
+         for (Point ourCell : ourBorder)  {
+            double ourPop = ourDis.getPop() - popGrid[(int) ourCell.getX()][(int) ourCell.getY()]
+             + popGrid[(int) theirCell.getX()][(int) theirCell.getY()];
+            double theirPop = theirDis.getPop() - popGrid[(int) theirCell.getX()][(int) theirCell.getY()]
+             + popGrid[(int) ourCell.getX()][(int) ourCell.getY()];
+             
+            if ((ourPop - disPop) / disPop > POP_THRESH ||
+             (theirPop - disPop) / disPop < -POP_THRESH) {
+               for (Point ourCellTwo : ourBorder)  {
+                  if (!ourCellTwo.equals(ourCell)) {
+                     double ourNewPop = ourPop -
+                      popGrid[(int) ourCellTwo.getX()][(int) ourCellTwo.getY()];
+                     double theirNewPop = theirPop +
+                      popGrid[(int) ourCellTwo.getX()][(int) ourCellTwo.getY()];
+                      
+                     if (Math.abs(ourNewPop - disPop) / disPop < POP_THRESH &&
+                      Math.abs(theirNewPop - disPop) / disPop < POP_THRESH)   {
+                        ArrayList<Point> ourTradeCells = new ArrayList<Point> ();
+                        ArrayList<Point> theirTradeCells = new ArrayList<Point> ();
+                        
+                        ourTradeCells.add(ourCell);
+                        ourTradeCells.add(ourCellTwo);
+                        theirTradeCells.add(theirCell);
+                        
+                        tradeList.add(new TradeProp(ourTradeCells, theirTradeCells,
+                         ourDis, theirDis));
+                     }
+                  }
+               }
+            }
+            else if ((ourPop - disPop) / disPop < -POP_THRESH ||
+             (theirPop - disPop) / disPop > POP_THRESH) {
+               for (Point theirCellTwo : theirBorder)  {
+                  if (!theirCellTwo.equals(theirCell)) {
+                  
+                     double theirNewPop = theirPop -
+                      popGrid[(int) theirCellTwo.getX()][(int) theirCellTwo.getY()];
+                     double ourNewPop = ourPop +
+                      popGrid[(int) theirCellTwo.getX()][(int) theirCellTwo.getY()];
+                      
+                     if (Math.abs(ourNewPop - disPop) / disPop < POP_THRESH &&
+                      Math.abs(theirNewPop - disPop) / disPop < POP_THRESH)   {
+                        ArrayList<Point> ourTradeCells = new ArrayList<Point> ();
+                        ArrayList<Point> theirTradeCells = new ArrayList<Point> ();
+                        
+                        ourTradeCells.add(ourCell);
+                        theirTradeCells.add(theirCell);
+                        theirTradeCells.add(theirCellTwo);
+                        
+                        tradeList.add(new TradeProp(ourTradeCells, theirTradeCells,
+                         ourDis, theirDis));
+                     }
+                  }
+               }
+            }
+            else  {
+               ArrayList<Point> ourTradeCells = new ArrayList<Point> ();
+               ArrayList<Point> theirTradeCells = new ArrayList<Point> ();
+               
+               ourTradeCells.add(ourCell);
+               theirTradeCells.add(theirCell);
+               tradeList.add(new TradeProp(ourTradeCells, theirTradeCells,
+                ourDis, theirDis));
+            } 
+         }
+      }
+      return tradeList;
    }
 }

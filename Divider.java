@@ -13,7 +13,7 @@ public class Divider
    private double[][] grid, popGrid;
    private ArrayList<District> disList;
    private int numDis, totalPerim = 0, highPerim = 0;
-   private double repRatio, blu, red, pop, disPop, prevPop = 0;
+   private double repRatio, blu, red, pop, curPop, disPop, prevPop = 0;
    
    public Divider(double[][] grid, double[][] popGrid, int numDis, double totalPop)
    {
@@ -21,6 +21,7 @@ public class Divider
       this.popGrid = popGrid;
       this.numDis = numDis;
       this.pop = totalPop;
+      this.curPop = this.pop;
       this.disPop = pop / numDis;
       disList = new ArrayList<District> ();
       
@@ -78,14 +79,16 @@ public class Divider
       int width = (int) Math.round(Math.sqrt(cellPop));
       int remain = grid.length % width, numRex = grid.length / width;
       int[] widths = new int[numRex + 1];
+      curPop = pop;
+      disPop = pop / numDis;
       
       // Deals with a special case where an odd remainder can mess things up
       if (width % 2 == 0 && remain % 2 == 1) {
-         if (Math.ceil(Math.sqrt(disPop)) % 2 == 1)   {
-            width = (int) Math.ceil(Math.sqrt(disPop));
+         if (Math.ceil(Math.sqrt(cellPop)) % 2 == 1)   {
+            width = (int) Math.ceil(Math.sqrt(cellPop));
          }
-         else if (((int) Math.sqrt(disPop)) % 2 == 1)   {
-            width = (int) (Math.sqrt(disPop));
+         else if (((int) Math.sqrt(cellPop)) % 2 == 1)   {
+            width = (int) (Math.sqrt(cellPop));
          }
          else  {
             width++;
@@ -150,6 +153,7 @@ public class Divider
                   disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
                   zone.add(temp); 
+                  updateDisPop();
                }
             }
             
@@ -175,6 +179,7 @@ public class Divider
                   disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
                   zone.add(temp); 
+                  updateDisPop();
                }
             }  
          }
@@ -201,7 +206,8 @@ public class Divider
                   Point temp = zone.remove(zone.size() - 1);
                   disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
-                  zone.add(temp); 
+                  zone.add(temp);
+                  updateDisPop(); 
                }
             }  
             i--;
@@ -228,6 +234,7 @@ public class Divider
                   disList.add(new District(grid, popGrid, zone));
                   zone = new ArrayList<Point> ();
                   zone.add(temp); 
+                  updateDisPop();
                }
             }
             i++;
@@ -275,6 +282,7 @@ public class Divider
                disList.add(new District(grid, popGrid, zone));
                zone = new ArrayList<Point> ();
                zone.add(temp); 
+               updateDisPop();
             }
          }
          
@@ -301,6 +309,7 @@ public class Divider
                disList.add(new District(grid, popGrid, zone));
                zone = new ArrayList<Point> ();
                zone.add(temp); 
+               updateDisPop();
             }
          }
       } 
@@ -346,6 +355,7 @@ public class Divider
                disList.add(new District(grid, popGrid, zone));
                zone = new ArrayList<Point> ();
                zone.add(temp); 
+               updateDisPop();
             }
          }
          if (ndx % 2 == 0) {
@@ -364,6 +374,12 @@ public class Divider
       if (popGrid[(int) p1.getX()][(int) p1.getY()] > 0.001)   {
          zone.add(p1);
       }
+   }
+   
+   private void updateDisPop()
+   {
+      curPop -= disList.get(disList.size() - 1).getPop();
+      disPop = curPop / (numDis - disList.size());
    }
       
    /*
@@ -448,9 +464,8 @@ public class Divider
       
       // Swap the district zones
       for (District dis: disList)   {
-         dis.swapCoords(grid);
-      }
-            
+         dis.swapCoords(grid, popGrid);
+      }    
    }
    
    private int calcPerim()
@@ -499,7 +514,6 @@ public class Divider
       for (Point p1 : zone)   {
          thisDisPop += popGrid[(int) p1.getX()][(int) p1.getY()];
       }
-      //System.out.println("disPop is: " + thisDisPop + ". Last disPop was: " + prevPop + ". Target disPop is: " + disPop);
       
       if (Math.abs(thisDisPop - disPop) <= Math.abs(prevPop - disPop) || prevPop == 0)   {
          prevPop = thisDisPop;
