@@ -12,8 +12,9 @@ import java.util.Random;
 
 public class Trader
 {
-   private static final int NUM_ITER = 100, ITER_MAX = 500;
+   private static final int NUM_ITER = 250, ITER_MAX = 500;
    private static final double POP_THRESH = .05;
+   private static final double TRADE_MAX = 5;
    private double[][] grid, popGrid;
    private ArrayList<District> disList;
    private int totalPerim, highPerim;
@@ -251,7 +252,7 @@ public class Trader
 	            ;
 	         }
 	      }
-	   } 
+	   }
       return noAbandon;   
    }
    
@@ -440,6 +441,7 @@ public class Trader
             trade.ourDis.addSquare(theirCell);
          }
       }
+      
       else if (trade.ourDis.contains(trade.theirCells.get(0)))  {         
          for (Point ourCell : trade.ourCells)   {
             trade.theirDis.removeSquare(ourCell);
@@ -466,6 +468,12 @@ public class Trader
       
       ArrayList<TradeProp> tradeList = getValidTrades(ourDis, theirDis);
       for (TradeProp trade : tradeList)   {
+         if (trade.ourCells.size() + trade.theirCells.size() > 4) {
+            //System.out.println(trade);
+         }
+         if (trade.ourCells.size() > 1 && trade.theirCells.size() > 1)  {
+            //System.out.println(trade);
+         }
          double oldRatio = repRatio;
          makeTrade(trade);
          setRatio();
@@ -511,11 +519,11 @@ public class Trader
    {
       double retVal = 0;
       
-      if (repToFlip >= .05) {
-         retVal = 1000;
+      if (repToFlip >= .02) {
+         retVal = Double.MAX_VALUE / 2;
       }
-      else if (repToFlip >= .035)  {
-         retVal = 500;
+      else if (repToFlip >= .01)  {
+         retVal = Double.MAX_VALUE / 4;
       }
       retVal -= trade.perimChange / trade.voteChange;
       return retVal;
@@ -573,6 +581,12 @@ public class Trader
       
       for (Point theirCell : theirBorder) {
          for (Point ourCell : ourBorder)  {
+            /*TradeProp temp = getTradeProp(ourDis, theirDis, ourCell, theirCell);
+            if (temp != null) {
+               tradeList.add(temp);
+            }*/
+            
+            
             double ourPop = ourDis.getPop() - popGrid[(int) ourCell.getX()][(int) ourCell.getY()]
              + popGrid[(int) theirCell.getX()][(int) theirCell.getY()];
             double theirPop = theirDis.getPop() - popGrid[(int) theirCell.getX()][(int) theirCell.getY()]
@@ -635,9 +649,119 @@ public class Trader
                theirTradeCells.add(theirCell);
                tradeList.add(new TradeProp(ourTradeCells, theirTradeCells,
                 ourDis, theirDis));
-            } 
+            }
          }
       }
       return tradeList;
+   }
+   
+   /**
+      Returns a single trade proposition for the given starter cells which satisfies the
+      population requirements, or null if no such trade exists.  This proposition has a max number
+      of cells that can be involved in the trade.
+   */
+   private TradeProp getTradeProp(District ourDis, District theirDis, Point ourCell, Point theirCell)
+   {      
+      ArrayList<Point> ourTradeCells = new ArrayList<Point> (),
+       theirTradeCells = new ArrayList<Point> ();
+      ourTradeCells.add(ourCell);
+      theirTradeCells.add(theirCell);
+      int count = 0;
+      double ourPopAfterTrade = getOurPopAfterTrade(ourTradeCells, theirTradeCells,
+       ourDis);
+      double theirPopAfterTrade = getTheirPopAfterTrade(ourTradeCells, theirTradeCells,
+       theirDis);
+      
+      while ((Math.abs(ourPopAfterTrade - disPop) > POP_THRESH * disPop ||
+       Math.abs(theirPopAfterTrade - disPop) > POP_THRESH * disPop) && count++ < TRADE_MAX)   {
+          
+         if (ourPopAfterTrade - disPop > POP_THRESH * disPop ||
+          theirPopAfterTrade - disPop < -POP_THRESH * disPop) {
+          
+            Point bestPoint = getBestPoint(ourDis, theirDis, ourTradeCells, theirTradeCells);
+            ourTradeCells.add(bestPoint);
+         }
+         else if (theirPopAfterTrade - disPop > POP_THRESH * disPop ||
+          ourPopAfterTrade - disPop < -POP_THRESH * disPop)  { 
+                    
+            Point bestPoint = getBestPoint(theirDis, ourDis, theirTradeCells, ourTradeCells);
+            theirTradeCells.add(bestPoint);
+         }
+         ourPopAfterTrade = getOurPopAfterTrade(ourTradeCells, theirTradeCells,
+          ourDis);
+         theirPopAfterTrade = getTheirPopAfterTrade(ourTradeCells, theirTradeCells,
+          theirDis);
+      }
+      
+      boolean failed = false;
+      if (Math.abs(ourPopAfterTrade - disPop) > POP_THRESH * disPop ||
+       Math.abs(theirPopAfterTrade - disPop) > POP_THRESH * disPop)   {
+         failed = true;
+      }
+            
+      if (!failed)   {
+         TradeProp finalTrade = new TradeProp(ourTradeCells, theirTradeCells, ourDis, theirDis);
+         return finalTrade;
+      }
+      return null;
+   }
+   
+   /**
+      Returns the point in our district which, if traded, would result in populations
+      that are closested to the target district population for both districts involved.
+      Orig is the district that we originally wanted to increase the vote for.
+   */
+   private Point getBestPoint(District ourDis, District theirDis,
+    ArrayList<Point> ourTradeCells, ArrayList<Point> theirTradeCells)
+   {
+      double smallError = Double.MAX_VALUE;
+      ArrayList<Point> ourBorder = theirDis.getBorderCells(ourDis);
+      Point bestPoint = ourBorder.get(0);
+         
+      for (Point p1 : ourBorder) {
+         if (!ourTradeCells.contains(p1)) {
+            ourTradeCells.add(p1);
+            double ourPopAfterTrade = getOurPopAfterTrade(ourTradeCells, theirTradeCells,
+             ourDis);
+            double theirPopAfterTrade = getTheirPopAfterTrade(ourTradeCells, theirTradeCells,
+             theirDis);
+             
+            double error = Math.max(Math.abs(ourPopAfterTrade - disPop),
+             Math.abs(theirPopAfterTrade - disPop));
+            
+            if (error < smallError)  {
+               smallError = error;
+               bestPoint = p1;
+            }
+            ourTradeCells.remove(p1);
+         }
+      }
+      return bestPoint;
+   }
+   
+   private double getOurPopAfterTrade(ArrayList<Point> ourTradeCells,
+    ArrayList<Point> theirTradeCells, District ourDis)  {
+    
+      double ourNewPop = ourDis.getPop();
+      for (Point p1 : ourTradeCells)   {
+         ourNewPop -= popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      for (Point p1 : theirTradeCells) {
+         ourNewPop += popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      return ourNewPop;
+   }
+   
+   private double getTheirPopAfterTrade(ArrayList<Point> ourTradeCells,
+    ArrayList<Point> theirTradeCells, District theirDis)  {
+    
+      double theirNewPop = theirDis.getPop();
+      for (Point p1 : theirTradeCells)   {
+         theirNewPop -= popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      for (Point p1 : ourTradeCells) {
+         theirNewPop += popGrid[(int) p1.getX()][(int) p1.getY()];
+      }
+      return theirNewPop;
    }
 }

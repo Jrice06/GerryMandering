@@ -400,4 +400,50 @@ public class District
       }
       zone = temp;
    }
+   
+   /**
+      Fixes any isolations that are simply one square thick.  This method will
+      simply give this one square away to a random neighboring district.
+   */
+   public void fixIsolation(ArrayList<District> disList)
+   {
+      for (Point p1 : zone)   {
+         int x = (int) p1.getX(), y = (int) p1.getY();
+         if (!zone.contains(new Point(x + 1, y)) && !zone.contains(new Point(x - 1, y))
+          && !zone.contains(new Point(x, y + 1)) && !zone.contains(new Point(x, y - 1)))  {
+            
+            Point temp = new Point(x + 1, y);
+            if (getDistrictContain(temp, disList) != null &&
+             !getDistrictContain(temp, disList).equals(this))  {
+               getDistrictContain(temp, disList).addSquare(p1);
+               this.removeSquare(p1);
+               return;
+            }
+            
+            temp = new Point(x - 1, y);
+            if (getDistrictContain(temp, disList) != null &&
+             !getDistrictContain(temp, disList).equals(this))  {
+               getDistrictContain(temp, disList).addSquare(p1);
+               this.removeSquare(p1);
+               return;
+            }
+            
+            temp = new Point(x, y - 1);
+            if (getDistrictContain(temp, disList) != null &&
+             !getDistrictContain(temp, disList).equals(this))  {
+               getDistrictContain(temp, disList).addSquare(p1);
+               this.removeSquare(p1);
+               return;
+            }
+            
+            temp = new Point(x, y + 1);
+            if (getDistrictContain(temp, disList) != null &&
+             !getDistrictContain(temp, disList).equals(this))  {
+               getDistrictContain(temp, disList).addSquare(p1);
+               this.removeSquare(p1);
+               return;
+            }
+         }
+      }
+   }
 }

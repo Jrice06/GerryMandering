@@ -37,7 +37,10 @@ public class GerryComponent extends JComponent
 	   if (datafile.equals(""))  {
          for (int ndxA = 0; ndxA < grid.length; ndxA++)  {
 		      for (int ndxB = 0; ndxB < grid[ndxA].length; ndxB++)   {
+		         double val = getRandomPopVal();
 		         grid[ndxA][ndxB] = getRandomVal();
+		         popGrid[ndxA][ndxB] = val;
+		         totalPop += val;
 		      }
 		   }
 		}
@@ -45,6 +48,7 @@ public class GerryComponent extends JComponent
 		else  {
 	      File file = new File(datafile);
 	      Scanner in = new Scanner(file);
+	      
 	      for (int ndxA = 0; ndxA < grid[0].length; ndxA++)  {
 	         for (int ndxB = 0; ndxB < grid.length; ndxB++) {
 	            double val = in.nextDouble();
@@ -62,7 +66,6 @@ public class GerryComponent extends JComponent
 	         System.out.println("Error in File Format");
 	      }
 	   }
-	   
 	   divider = new Divider(grid, popGrid, numDis, totalPop);
 	   this.disList = divider.getDisList();
 	   trade = new Trader(grid, popGrid, disList, totalPop / numDis,
@@ -99,15 +102,21 @@ public class GerryComponent extends JComponent
 	
 	public double getRandomVal()
 	{
-	   /*int val = rand.nextInt(3) + 1;
+	   int val = rand.nextInt(3);
 	   
-	   if (val == 3)  {
-	      val = 2;
+	   if (val == 2)  {
+	      val = 1;
 	   }
-	   return val;*/
+	   return val;
+	   //return rand.nextDouble();
+	}
+	
+	public double getRandomPopVal()
+	{
+	   int val = rand.nextInt(10) + 1;
 	   
-	   // Uncomment to make the choice 50-50
-	   return rand.nextDouble();
+	   //return val;
+	   return 1;
 	}
 	
 	/**

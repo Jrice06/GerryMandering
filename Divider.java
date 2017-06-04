@@ -59,10 +59,12 @@ public class Divider
       snakeInit();
       reflectGrid();
       perimH = calcPerim() + calcHighPerim();
+      boolean isolatedH = gridHasIsolation();
       
       System.out.print("Vertical Snake: " + perimV);
       System.out.println("   Horizontal Snake: " + perimH);
-      if ((perimV < perimH && !isolatedV) || gridHasIsolation()) {
+      if ((perimV < perimH && !isolatedV) || (isolatedH && !isolatedV) ||
+       (perimV < perimH && isolatedV && isolatedH)) {
          disList = new ArrayList<District> ();
          prevPop = 0; 
          snakeInit();
@@ -71,6 +73,7 @@ public class Divider
       else  {
          System.out.println("Using horizontal snake");
       }
+      fixIsolations();
    }
    
    private void snakeInit()
@@ -500,6 +503,19 @@ public class Divider
          }
       }
       return ret;
+   }
+   
+   /**
+      Fixes any isolations that are simply one square thick.  This method will
+      simply give this one square away to a random neighboring district.
+   */
+   private void fixIsolations()
+   {
+      for (District dis : disList)  {
+         if (dis.hasIsolation()) {
+            dis.fixIsolation(disList);
+         }
+      }
    }
    
    /**
